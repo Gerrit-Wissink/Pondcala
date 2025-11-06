@@ -1,18 +1,18 @@
 import { useRef, useEffect } from "react";
 import SmallPond from "./svg/smallPond";
 
-export default function YourPondRow({counts, score, opCounts}: {counts: {get: number[], set: React.Dispatch<React.SetStateAction<number[]>>}, score: {get: number, set: React.Dispatch<React.SetStateAction<number>>}, opCounts: {get: number[], set: React.Dispatch<React.SetStateAction<number[]>>}}) {
-    const opCountsRef = useRef(opCounts.get);
+export default function YourPondRow({props}: {props: {counts: {get: number[], set: React.Dispatch<React.SetStateAction<number[]>>}, score: {get: number, set: React.Dispatch<React.SetStateAction<number>>}, opCounts: {get: number[], set: React.Dispatch<React.SetStateAction<number[]>>}, turn: {get: number, set: React.Dispatch<React.SetStateAction<number>>}}}) {
+    const opCountsRef = useRef(props.opCounts.get);
     
     // Keep ref in sync with state
     useEffect(() => {
-        opCountsRef.current = opCounts.get;
-    }, [opCounts.get]);
+        opCountsRef.current = props.opCounts.get;
+    }, [props.opCounts.get]);
     
     return (
         <>
             <div style = {{display: 'flex', gap: '2vw'}}>
-                {counts.get.map((value, index) =>
+                {props.counts.get.map((value, index) =>
                         <div>
                             <SmallPond onClick={() => {
                                 takeTurn(index);
@@ -26,12 +26,12 @@ export default function YourPondRow({counts, score, opCounts}: {counts: {get: nu
 
     function takeTurn(index: number){
         console.log('Take turn called');
-        const fishToMove = counts.get[index];
+        const fishToMove = props.counts.get[index];
         
         // Sync ref with current state at start of turn
-        opCountsRef.current = [...opCounts.get];
+        opCountsRef.current = [...props.opCounts.get];
         
-        counts.set((prev) => {
+        props.counts.set((prev) => {
             let temp = [...prev];
             temp[index] = 0;
             let result = moveFish(index + 1, temp, fishToMove);
@@ -48,7 +48,8 @@ export default function YourPondRow({counts, score, opCounts}: {counts: {get: nu
         });
         
         // Update opponent state at the end
-        opCounts.set([...opCountsRef.current]);
+        props.opCounts.set([...opCountsRef.current]);
+        props.turn.set(prev => prev + 1)
     }
 
 
@@ -61,7 +62,7 @@ export default function YourPondRow({counts, score, opCounts}: {counts: {get: nu
         for(let i = 0; i < iterations; i++){
             if(index + i > (len - 1)){
                 console.log("Hit the edge of the array");
-                score.set(score.get + 1);
+                props.score.set(props.score.get + 1);
                 console.log("score increased");
                 let numLeft = iterations - i - 1;
                 if(numLeft > 0){

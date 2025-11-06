@@ -7,10 +7,10 @@ let SmallPond = ({onClick, count}: {onClick: () => void, count: number}) => {
     // console.log('SmallPond rendering with count:', count);
 
     const smallPondStyle = {
-        fill: hovered ? 'navy' : 'steelblue',
-        stroke: hovered ? 'white' : 'black',
+        fill: count > 0 ? hovered ? 'navy' : 'steelblue': 'grey',
+        stroke: count > 0 ? hovered ? 'white' : 'black': 'black',
         transition: "all 0.2s ease",
-        cursor: "pointer",
+        cursor: count > 0 ? "pointer": "",
         strokeWidth: 3
     }
 
@@ -31,7 +31,7 @@ let SmallPond = ({onClick, count}: {onClick: () => void, count: number}) => {
 
                     onMouseOver={() => {setHovered(true)}}
                     onMouseOut={() => {setHovered(false)}}
-                    onClick={onClick}
+                    onClick={count > 0 ? onClick : () => {console.log("Pond is disabled")}}
                 />
             </svg>
             <h1 style={{color: 'white'}}>{count}</h1>
