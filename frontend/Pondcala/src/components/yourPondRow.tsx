@@ -1,8 +1,10 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import SmallPond from "./svg/smallPond";
 
 export default function YourPondRow({props}: {props: {counts: {get: number[], set: React.Dispatch<React.SetStateAction<number[]>>}, score: {get: number, set: React.Dispatch<React.SetStateAction<number>>}, opCounts: {get: number[], set: React.Dispatch<React.SetStateAction<number[]>>}, turn: {get: number, set: React.Dispatch<React.SetStateAction<number>>}}}) {
     const opCountsRef = useRef(props.opCounts.get);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [highlightedPond, setHighlightedPond] = useState<number | null>(null);
     
     // Keep ref in sync with state
     useEffect(() => {
@@ -13,10 +15,16 @@ export default function YourPondRow({props}: {props: {counts: {get: number[], se
         <>
             <div style = {{display: 'flex', gap: '2vw'}}>
                 {props.counts.get.map((value, index) =>
-                        <div>
-                            <SmallPond onClick={() => {
-                                takeTurn(index);
-                            }} count={value} />
+                        <div key={index}>
+                            <SmallPond 
+                                onClick={() => {
+                                    if (!isAnimating) {
+                                        takeTurn(index);
+                                    }
+                                }} 
+                                count={value}
+                                highlighted={highlightedPond === index}
+                            />
                         </div>
                     )
                 }
@@ -24,83 +32,112 @@ export default function YourPondRow({props}: {props: {counts: {get: number[], se
         </>
     );
 
-    function takeTurn(index: number){
+    async function takeTurn(index: number){
+        if (isAnimating) return; // Prevent multiple animations at once
+        
         console.log('Take turn called');
+        setIsAnimating(true);
+        
+        // This points to ONE of the ponds in the counts.get array
+        // referring to the smallPonds on your side
         const fishToMove = props.counts.get[index];
         
         // Sync ref with current state at start of turn
         opCountsRef.current = [...props.opCounts.get];
         
+        // Clear the selected pond immediately
         props.counts.set((prev) => {
-            let temp = [...prev];
+            const temp = [...prev];
             temp[index] = 0;
-            let result = moveFish(index + 1, temp, fishToMove);
-            temp = result.arr;
-            let remainder = result.remainder;
-            
-            while(remainder > 0){
-                result = moveFish(0, temp, remainder);
-                temp = result.arr;
-                remainder = result.remainder;
-            }
-            console.log("End result", temp);
             return temp;
         });
         
+        // Start animated movement
+        await animatedMoveFish(index + 1, fishToMove);
+        
         // Update opponent state at the end
         props.opCounts.set([...opCountsRef.current]);
-        props.turn.set(prev => prev + 1)
+        props.turn.set(prev => prev + 1);
+        setIsAnimating(false);
     }
 
 
-    function moveFish(index: number, yourCounts: number[], iterations: number){
-        console.log("Move Fish is called with iterations:", iterations, "for index:", index);
-        console.log("yourCounts[index]:", yourCounts[index]);
-        const len = yourCounts.length;
-        let remainder = 0;
+    async function animatedMoveFish(startIndex: number, fishCount: number): Promise<void> {
+        console.log("Animated move fish starting at index:", startIndex, "with", fishCount, "fish");
+        let currentIndex = startIndex;
+        // FishCount is the value of the selected pond
+        let remainingFish = fishCount;
         
-        for(let i = 0; i < iterations; i++){
-            if(index + i > (len - 1)){
+        while (remainingFish > 0) {
+            const len = props.counts.get.length;
+            
+            // Move fish in your ponds
+            while (remainingFish > 0 && currentIndex < len) {
+                await increaseIndexAnimated(currentIndex);
+                remainingFish--;
+                currentIndex++;
+                
+                if (remainingFish === 0) return;
+            }
+            
+            // Hit the edge - add to score
+            if (currentIndex >= len) {
                 console.log("Hit the edge of the array");
-                props.score.set(props.score.get + 1);
+                props.score.set(prev => prev + 1);
                 console.log("score increased");
-                let numLeft = iterations - i - 1;
-                if(numLeft > 0){
-                    console.log("Calling increaseOpponentsPonds with numLeft: ", numLeft);
-                    remainder = increaseOpponentsPonds(iterations - i - 1);
-                    console.log("Remainder from increaseOpponentsPonds:", remainder);
+                
+                if (remainingFish > 0) {
+                    console.log("Moving to opponent ponds with", remainingFish, "fish remaining");
+                    remainingFish = await animatedIncreaseOpponentsPonds(remainingFish);
+                    currentIndex = 0; // Reset to start of your ponds
                 }
-                break;
             }
-            yourCounts[index + i] += 1;
         }
-
-        return {
-            arr: yourCounts,
-            remainder
-        };
     }
 
-    function increaseOpponentsPonds(iterations: number): number {
-        console.log("increaseOpponentsPonds called with iterations: ", iterations);
+    async function increaseIndexAnimated(index: number): Promise<void> {
+        return new Promise((resolve) => {
+            // Highlight the pond when fish lands
+            setHighlightedPond(index);
+            
+            setTimeout(() => {
+                props.counts.set(prev => {
+                    const newCounts = [...prev];
+                    newCounts[index] += 1;
+                    return newCounts;
+                });
+                
+                // Remove highlight after a brief moment
+                setTimeout(() => {
+                    setHighlightedPond(null);
+                    // resolve is the Promise equivalent of return
+                    resolve();
+                }, 300); // Keep highlight for 300ms
+            }, 200); // Brief delay before adding fish
+        });
+    }
 
+    async function animatedIncreaseOpponentsPonds(fishCount: number): Promise<number> {
+        console.log("Animated opponent ponds with", fishCount, "fish");
         const temp = [...opCountsRef.current].reverse();
-        const len = opCountsRef.current.length;
-        let remainder = 0;
+        const len = temp.length;
+        let remainingFish = fishCount;
         
-        for(let i = 0; i < iterations; i++){
-            if(i > (len - 1)){
-                console.log("Hit the edge of the opponents array");
-                remainder = iterations - i;
-                console.log("Remainder calculated:", remainder);
-                break;
-            }
+        for (let i = 0; i < fishCount && i < len; i++) {
+            await new Promise(resolve => setTimeout(resolve, 500)); // Animation delay
             temp[i] += 1;
+            remainingFish--;
+            
+            // Update the visual state
+            opCountsRef.current = [...temp].reverse();
+            props.opCounts.set([...opCountsRef.current]);
         }
         
-        // Update the ref directly
+        // Update the ref with final state
         opCountsRef.current = temp.reverse();
         
-        return remainder;
+        return remainingFish; // Return any fish that didn't fit
     }
+
+
 }

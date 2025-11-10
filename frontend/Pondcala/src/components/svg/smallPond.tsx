@@ -1,13 +1,13 @@
 import { useState } from "react";
 
 
-let SmallPond = ({onClick, count}: {onClick: () => void, count: number}) => {
+let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, count: number, highlighted?: boolean}) => {
     const [hovered, setHovered] = useState(false);
     
     // console.log('SmallPond rendering with count:', count);
 
     const smallPondStyle = {
-        fill: count > 0 ? hovered ? 'navy' : 'steelblue': 'grey',
+        fill: highlighted ? 'orange' : count > 0 ? hovered ? 'navy' : 'steelblue': 'grey',
         stroke: count > 0 ? hovered ? 'white' : 'black': 'black',
         transition: "all 0.2s ease",
         cursor: count > 0 ? "pointer": "",
