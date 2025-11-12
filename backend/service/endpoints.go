@@ -18,20 +18,20 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Public endpoint
-	mux.HandleFunc("/login", {})
+	mux.HandleFunc("/login", Login)
 
-	// Protected API endpoints
-	mux.HandleFunc("/turn", {})
-	mux.HandleFunc("/next", {})
-	mux.HandleFunc("/ws/chat", {})
+	// // Protected API endpoints
+	// mux.HandleFunc("/turn", func)
+	// mux.HandleFunc("/next", func)
+	// mux.HandleFunc("/ws/chat", func)
 
-	// Static file server (root page)
-	fs := http.FileServer(http.Dir("./static"))
-	mux.Handle("/", fs)
+	// // Static file server (root page)
+	// fs := http.FileServer(http.Dir("./static"))
+	// mux.Handle("/", fs)
 
-	// Wrap with session middleware
-	protected := {}
+	// // Wrap with session middleware
+	// protected := func
 	// If we hadn't created a custom mux to enable middleware,
 	// the second param would be nil, which uses http.DefaultServeMux.
-	http.ListenAndServe("localhost:8080", protected)
+	// http.ListenAndServe("localhost:8080", protected)
 }

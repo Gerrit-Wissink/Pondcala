@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	// "strconv"
@@ -18,4 +20,15 @@ func writeError(w http.ResponseWriter, status int, errorMessage string) {
 		Success: false,
 		Error:   errorMessage,
 	})
+}
+
+func generateToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+
+	token := base64.RawURLEncoding.EncodeToString(b)
+
+	return token, nil
 }
