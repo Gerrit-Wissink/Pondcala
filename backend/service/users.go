@@ -50,6 +50,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var expiresAt = time.Now().Add(24 * time.Hour)
+
+	sessionResult, err := business.StoreUserToken(token, user, expiresAt)
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    token,
@@ -57,7 +61,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().Add(24 * time.Hour),
+		Expires:  expiresAt,
 	})
 
 	// Success response using inline struct

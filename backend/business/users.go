@@ -2,6 +2,7 @@ package business
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/services"
@@ -19,7 +20,7 @@ func ProcessLogin(username string, password string) (*models.User, error) {
 		return nil, fmt.Errorf("Password is required")
 	}
 
-	hash_password, h_err := Hash(_password)
+	hash_password, h_err := HashPassword(_password)
 
 	if h_err != nil {
 		return nil, h_err
@@ -32,4 +33,16 @@ func ProcessLogin(username string, password string) (*models.User, error) {
 	}
 
 	return user, nil
+}
+
+func StoreUserToken(token string, user *models.User, expiresAt time.Time) (*models.Session, error) {
+	hashedToken := HashToken(token)
+
+	session, err := services.CreateSession(hashedToken, user.ID, expiresAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return session, nil
 }

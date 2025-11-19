@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Fish from "./fish";
 
 
 let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, count: number, highlighted?: boolean}) => {
@@ -16,6 +17,7 @@ let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, co
 
     return (
         <div>
+            <Fish />
             <svg 
                 viewBox={`0 0 400 150`}
                 style={{width: "100%", height: "auto", maxWidth: "400px"}}

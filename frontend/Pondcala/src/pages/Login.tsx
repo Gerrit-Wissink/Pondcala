@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiClient } from "../utils/apiClient.js";
 
 export default function Login() {
     const [username, setUsername] = useState("")
@@ -6,19 +7,39 @@ export default function Login() {
     const [errorMessage, setErrorMessage] = useState("");
     const [creating, setCreating] = useState(false);
 
-    function handleLogin() {
+    const SERVER_URL = "localhost:8080";
+
+    async function handleLogin() {
         setErrorMessage("");
         event?.preventDefault();
-        if (username.length < 1) {
-            setErrorMessage("Username is required");
-            return;
-        }
-        if (password.length < 1) {
-            setErrorMessage("Password is required");
-            return;
-        }
+        try{
+            if (username.length < 1) {
+                throw new Error("Username is required")
+            }
+            if (password.length < 1) {
+                throw new Error("Password is required");
+            }
 
-        
+            let requestBody = {
+                username,
+                password
+            }
+
+            let response = await apiClient.post(SERVER_URL, requestBody)
+
+            if(response.status !== 200 || response.data.Error) {
+                throw new Error(`${response.statusText}`)
+            }
+
+            let user = response.data.User;
+            console.log("User returned from login", user);
+
+
+
+        }catch (error) {
+            console.log(`Error logging in: ${error}`)
+            setErrorMessage(`${error}`)
+        }
     }
 
     const inputStyle = {

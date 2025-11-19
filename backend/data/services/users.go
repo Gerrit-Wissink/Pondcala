@@ -2,18 +2,35 @@ package services
 
 import (
 	"fmt"
+	"time"
 
-	"../models"
-	"./db"
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/services/db"
 )
 
 func Login(username string, hashedPassword string) (*models.User, error) {
 	var user models.User
-	result := db.DB.Model(&user).Where("id = username", username)
+	result := db.DB.Where("id = username", username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return &user, nil
+}
+
+func CreateSession(tokenHash string, userID uint, expiresAt time.Time) (*models.Session, error) {
+	session := &models.Session{
+		TokenHash: tokenHash,
+		UserID:    userID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	result := db.DB.create(session)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to create user: %w", result.Error)
+	}
+
+	return session, nil
 }
 
 // CreateUser creates a new user in the database

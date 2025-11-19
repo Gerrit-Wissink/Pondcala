@@ -10,6 +10,8 @@ export default function Lobby() {
                     <button>Find a Game</button>
                 </div>
 
+                
+
                 <LobbyChat />
             </div>
         </>
