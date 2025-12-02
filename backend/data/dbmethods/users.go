@@ -1,11 +1,11 @@
-package services
+package dbmethods
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods/db"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/services/db"
 )
 
 func Login(username string, hashedPassword string) (*models.User, error) {
@@ -31,6 +31,21 @@ func CreateSession(tokenHash string, userID uint, expiresAt time.Time) (*models.
 	}
 
 	return session, nil
+}
+
+func VerifySession(tokenHash string) (*models.Session, error) {
+	var session models.Session
+	result := db.DB.Where("TokenHash = ?", tokenHash).First(&session)
+	if result.Error != nil || result.RowsAffected == 0 {
+		return nil, fmt.Errorf("failed to verify session: %w", result.Error)
+	}
+
+	// Check if the session has expired
+	if time.Now().After(session.ExpiresAt) {
+		return nil, fmt.Errorf("session has expired")
+	}
+
+	return &session, nil
 }
 
 // CreateUser creates a new user in the database

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/services"
 )
 
 func ProcessLogin(username string, password string) (*models.User, error) {
@@ -26,7 +26,7 @@ func ProcessLogin(username string, password string) (*models.User, error) {
 		return nil, h_err
 	}
 
-	user, d_err := services.Login(_username, hash_password)
+	user, d_err := dbmethods.Login(_username, hash_password)
 
 	if d_err != nil {
 		return nil, d_err
@@ -38,7 +38,7 @@ func ProcessLogin(username string, password string) (*models.User, error) {
 func StoreUserToken(token string, user *models.User, expiresAt time.Time) (*models.Session, error) {
 	hashedToken := HashToken(token)
 
-	session, err := services.CreateSession(hashedToken, user.ID, expiresAt)
+	session, err := dbmethods.CreateSession(hashedToken, user.ID, expiresAt)
 
 	if err != nil {
 		return nil, err

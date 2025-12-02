@@ -12,7 +12,7 @@ import (
 func Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5174")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if r.Method != http.MethodPost {
 		//throw error
@@ -52,7 +52,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	var expiresAt = time.Now().Add(24 * time.Hour)
 
-	sessionResult, err := business.StoreUserToken(token, user, expiresAt)
+	_, sessionErr := business.StoreUserToken(token, user, expiresAt)
+
+	if sessionErr != nil {
+		writeError(w, http.StatusInternalServerError, sessionErr.Error())
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
@@ -74,5 +78,31 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Message: "Turn processed successfully",
 		User:    user,
+	})
+}
+
+func GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed. Use GET")
+		return
+	}
+
+	users, err := business.FetchAllUsers()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to fetch users: "+err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(struct {
+		Success bool           `json:"success"`
+		Users   []*models.User `json:"users,omitempty"`
+	}{
+		Success: true,
+		Users:   users,
 	})
 }

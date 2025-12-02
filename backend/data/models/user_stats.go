@@ -11,7 +11,7 @@ type UserStats struct {
 	NumLoss     int  `json:"num_loss" gorm:"default:0"`
 	GamesPlayed int  `json:"games_played" gorm:"default:0"`
 	HighScore   int  `json:"high_score" gorm:"default:0"`
-	
+
 	// Foreign Key Relationship
-	User User `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	// User User `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }

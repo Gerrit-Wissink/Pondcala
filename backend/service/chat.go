@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
+	"github.com/Gerrit-Wissink/Pondcala/backend/business"
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,9 +23,10 @@ var upgrader = websocket.Upgrader{
 
 // ChatMessage is the payload exchanged over WebSockets.
 // It currently carries the raw message text and an ISO timestamp string.
-type ChatMessage struct {
+type LobbyChatMessage struct {
 	Message string `json:"message"`
 	Time    string `json:"time"`
+	Author  uint   `json:"author"`
 }
 
 // ChatHub coordinates all chat activity.
@@ -35,20 +39,20 @@ type ChatMessage struct {
 // - mu: protects both clients and messages across goroutines
 type ChatHub struct {
 	clients    map[*websocket.Conn]bool
-	broadcast  chan ChatMessage
+	broadcast  chan LobbyChatMessage
 	register   chan *websocket.Conn
 	unregister chan *websocket.Conn
-	messages   []ChatMessage
+	messages   []LobbyChatMessage
 	mu         sync.RWMutex
 }
 
 // Hub is the single global instance used by the server.
 var Hub = &ChatHub{
 	clients:    make(map[*websocket.Conn]bool),
-	broadcast:  make(chan ChatMessage),
+	broadcast:  make(chan LobbyChatMessage),
 	register:   make(chan *websocket.Conn),
 	unregister: make(chan *websocket.Conn),
-	messages:   make([]ChatMessage, 0),
+	messages:   make([]LobbyChatMessage, 0),
 }
 
 // Run is the event loop for the hub. It should be started once (e.g., in main)
@@ -101,11 +105,21 @@ func (h *ChatHub) Run() {
 		// in-memory history, and fan it out to all connected clients.
 		case message := <-h.broadcast:
 			// Sanitize `message` here to prevent XSS
+			message.Message = sanitizeMessage(message.Message)
+			if strings.TrimSpace(message.Message) == "" {
+				continue
+			}
 
 			// Store message in memory (simple in-memory log; persists until process restarts)
 			// Again, you'd replace this in-memory store with a database
 			h.mu.Lock()
 			h.messages = append(h.messages, message)
+
+			_, err := business.SaveLobbyMessage(message.Author, message.Message)
+			if err != nil {
+				log.Printf("Error saving message to database: %v", err)
+			}
+
 			h.mu.Unlock()
 
 			// Broadcast to all connected clients. If a client write fails,
@@ -148,7 +162,7 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-		var msg ChatMessage
+		var msg LobbyChatMessage
 		err := conn.ReadJSON(&msg)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -165,8 +179,13 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 // This can be useful for non-WebSocket clients or debugging.
 func GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	Hub.mu.RLock()
+	messages, err := business.GetAllLobbyMessages()
+	if err != nil {
+		//makes an empty messages array if there is an error fetching from the database
+		messages = make([]models.LobbyChat, 0)
+	}
 	defer Hub.mu.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Hub.messages)
+	json.NewEncoder(w).Encode(messages)
 }

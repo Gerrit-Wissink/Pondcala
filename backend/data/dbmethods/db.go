@@ -1,9 +1,10 @@
-package services
+package dbmethods
 
 import (
-    "gorm.io/driver/postgres" //Lets you connect to postgres
-    "gorm.io/gorm" //Lets you user gorm functionality
-    "log" //Lets you log errors for debugging
+	"log" //Lets you log errors for debugging
+
+	"gorm.io/driver/postgres" //Lets you connect to postgres
+	"gorm.io/gorm"            //Lets you user gorm functionality
 )
 
 var DB *gorm.DB

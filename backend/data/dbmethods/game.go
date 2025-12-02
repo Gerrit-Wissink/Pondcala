@@ -1,10 +1,10 @@
-package services
+package dbmethods
 
 import (
 	"fmt"
 
-	"../models"
-	"./db"
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods/db"
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
 )
 
 func CreateGame(hostID, opponentID uint) (*models.Game, error) {
