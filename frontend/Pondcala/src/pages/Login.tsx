@@ -1,5 +1,5 @@
 import { useState } from "react";
-// import { apiClient } from "../utils/apiClient.js";
+import apiClient from "../utils/apiClient";
 
 export default function Login() {
     const [username, setUsername] = useState("")
@@ -20,16 +20,16 @@ export default function Login() {
         //         throw new Error("Password is required");
         //     }
 
-        //     let requestBody = {
-        //         username,
-        //         password
-        //     }
+            let requestBody = {
+                username,
+                password
+            }
 
-        //     let response = await apiClient.post("/login", requestBody);
+            let response = await apiClient.post("/login", requestBody);
 
-        //     if(response.status !== 200 || response.data.Error) {
-        //         throw new Error(`${response.statusText}`)
-        //     }
+            if(response.status !== 200 || response.data.Error) {
+                throw new Error(`${response.statusText}`)
+            }
 
         //     let user = response.data.User;
         //     console.log("User returned from login", user);

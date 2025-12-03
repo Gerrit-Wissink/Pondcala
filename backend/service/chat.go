@@ -29,6 +29,27 @@ type LobbyChatMessage struct {
 	Author  uint   `json:"author"`
 }
 
+// IncomingMessage is a union type that represents the different message
+// payloads the client can send. Fields are optional and used depending
+// on the `Type` value.
+type IncomingMessage struct {
+	Type string `json:"type"`
+
+	// lobby-msg / game-msg fields
+	Username string `json:"username,omitempty"`
+	Message  string `json:"message,omitempty"`
+	Time     string `json:"time,omitempty"`
+	Author   uint   `json:"author,omitempty"`
+	Players  []uint `json:"players,omitempty"`
+
+	// game-turn specific fields
+	GameID        uint  `json:"gameId,omitempty"`
+	TurnTaker     uint  `json:"turnTaker,omitempty"`
+	SelectedIndex int   `json:"selectedIndex,omitempty"`
+	HostPools     []int `json:"hostPools,omitempty"`
+	OppPools      []int `json:"opponentPools,omitempty"`
+}
+
 // ChatHub coordinates all chat activity.
 //
 // Concurrency model:
@@ -38,21 +59,23 @@ type LobbyChatMessage struct {
 // - messages: in-memory history; appended to on each broadcast (you'd replace with DB table)
 // - mu: protects both clients and messages across goroutines
 type ChatHub struct {
-	clients    map[*websocket.Conn]bool
-	broadcast  chan LobbyChatMessage
+	// clients maps a connection to its authenticated userID (0 if unknown)
+	clients map[*websocket.Conn]uint
+	// broadcast carries generic incoming messages
+	broadcast  chan IncomingMessage
 	register   chan *websocket.Conn
 	unregister chan *websocket.Conn
-	messages   []LobbyChatMessage
+	messages   []IncomingMessage
 	mu         sync.RWMutex
 }
 
 // Hub is the single global instance used by the server.
 var Hub = &ChatHub{
-	clients:    make(map[*websocket.Conn]bool),
-	broadcast:  make(chan LobbyChatMessage),
+	clients:    make(map[*websocket.Conn]uint),
+	broadcast:  make(chan IncomingMessage),
 	register:   make(chan *websocket.Conn),
 	unregister: make(chan *websocket.Conn),
-	messages:   make([]LobbyChatMessage, 0),
+	messages:   make([]IncomingMessage, 0),
 }
 
 // Run is the event loop for the hub. It should be started once (e.g., in main)
@@ -75,7 +98,8 @@ func (h *ChatHub) Run() {
 		case client := <-h.register:
 			// The Go Mutex lock ensures that the clients map is safely modified.
 			h.mu.Lock()
-			h.clients[client] = true
+			// unknown user at registration time; set userID 0 until first inbound message
+			h.clients[client] = 0
 			// Release the Mutex lock after modification.
 			h.mu.Unlock()
 
@@ -99,40 +123,99 @@ func (h *ChatHub) Run() {
 			}
 			h.mu.Unlock()
 
-		// A client sent a message to broadcast to all other clients.
-		//
-		// Dequeue the message from the broadcast channel, store it in the
-		// in-memory history, and fan it out to all connected clients.
-		case message := <-h.broadcast:
-			// Sanitize `message` here to prevent XSS
-			message.Message = sanitizeMessage(message.Message)
-			if strings.TrimSpace(message.Message) == "" {
-				continue
-			}
-
-			// Store message in memory (simple in-memory log; persists until process restarts)
-			// Again, you'd replace this in-memory store with a database
-			h.mu.Lock()
-			h.messages = append(h.messages, message)
-
-			_, err := business.SaveLobbyMessage(message.Author, message.Message)
-			if err != nil {
-				log.Printf("Error saving message to database: %v", err)
-			}
-
-			h.mu.Unlock()
-
-			// Broadcast to all connected clients. If a client write fails,
-			// close and drop that client to avoid leaking dead connections.
-			h.mu.RLock()
-			for client := range h.clients {
-				if err := client.WriteJSON(message); err != nil {
-					log.Printf("Error broadcasting: %v", err)
-					client.Close()
-					delete(h.clients, client)
+		// A client sent a message to broadcast (or direct) to other clients.
+		case inc := <-h.broadcast:
+			// Route based on message type.
+			switch inc.Type {
+			case "lobby-msg":
+				// sanitize text and ignore empty messages
+				inc.Message = sanitizeMessage(inc.Message)
+				if strings.TrimSpace(inc.Message) == "" {
+					continue
 				}
+
+				// Append to history and snapshot conns
+				h.mu.Lock()
+				h.messages = append(h.messages, inc)
+				conns := make([]*websocket.Conn, 0, len(h.clients))
+				for c := range h.clients {
+					conns = append(conns, c)
+				}
+				h.mu.Unlock()
+
+				// Persist lobby message (do DB work outside lock)
+				if _, err := business.SaveLobbyMessage(inc.Author, inc.Message); err != nil {
+					log.Printf("Error saving message to database: %v", err)
+				}
+
+				// Broadcast to all connections (writes performed outside lock)
+				for _, c := range conns {
+					if err := c.WriteJSON(inc); err != nil {
+						log.Printf("Error broadcasting to client: %v", err)
+						c.Close()
+						// schedule removal
+						h.unregister <- c
+					}
+				}
+
+			case "game-msg":
+				// game-msg: only forward to players listed in Players
+				inc.Message = sanitizeMessage(inc.Message)
+				if strings.TrimSpace(inc.Message) == "" {
+					continue
+				}
+
+				// Build target set
+				targets := make(map[uint]struct{}, len(inc.Players))
+				for _, id := range inc.Players {
+					targets[id] = struct{}{}
+				}
+
+				// Snapshot matching connections
+				h.mu.RLock()
+				conns := make([]*websocket.Conn, 0)
+				for c, uid := range h.clients {
+					if _, ok := targets[uid]; ok {
+						conns = append(conns, c)
+					}
+				}
+				h.mu.RUnlock()
+
+				for _, c := range conns {
+					if err := c.WriteJSON(inc); err != nil {
+						log.Printf("Error routing game-msg: %v", err)
+						c.Close()
+						h.unregister <- c
+					}
+				}
+
+			case "game-turn":
+				// game-turn: similar routing to game-msg, contains game-specific fields
+				targets := make(map[uint]struct{}, len(inc.Players))
+				for _, id := range inc.Players {
+					targets[id] = struct{}{}
+				}
+
+				h.mu.RLock()
+				conns := make([]*websocket.Conn, 0)
+				for c, uid := range h.clients {
+					if _, ok := targets[uid]; ok {
+						conns = append(conns, c)
+					}
+				}
+				h.mu.RUnlock()
+
+				for _, c := range conns {
+					if err := c.WriteJSON(inc); err != nil {
+						log.Printf("Error routing game-turn: %v", err)
+						c.Close()
+						h.unregister <- c
+					}
+				}
+
+			default:
+				log.Printf("Unknown message type: %q", inc.Type)
 			}
-			h.mu.RUnlock()
 		}
 	}
 }
@@ -162,8 +245,8 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-		var msg LobbyChatMessage
-		err := conn.ReadJSON(&msg)
+		var inc IncomingMessage
+		err := conn.ReadJSON(&inc)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
@@ -171,7 +254,22 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		Hub.broadcast <- msg
+		// If the incoming message carries an author/turnTaker, associate that userID
+		// with this connection so targeted messages can be routed.
+		huid := uint(0)
+		if inc.Author != 0 {
+			huid = inc.Author
+		} else if inc.TurnTaker != 0 {
+			huid = inc.TurnTaker
+		}
+
+		if huid != 0 {
+			Hub.mu.Lock()
+			Hub.clients[conn] = huid
+			Hub.mu.Unlock()
+		}
+
+		Hub.broadcast <- inc
 	}
 }
 

@@ -33,6 +33,7 @@ body {
 
 .chat-sidebar {
 	background: white;
+	opacity: 0.8;
 	border-radius: var(--border-radius);
 	padding: 1em;
 	box-shadow: var(--box-shadow);
@@ -108,7 +109,7 @@ body {
   height: 100%;
 }
 
-button {
+#send-btn {
 	margin-top: 10px;
 	padding: 8px 14px;
 	font-size: 14px;
@@ -119,7 +120,7 @@ button {
 	transition: background 0.15s ease, color 0.15s ease;
 }
 
-button:hover {
+#send-btn:hover {
 	background: var(--border-color);
 	color: var(--background-color);
 }

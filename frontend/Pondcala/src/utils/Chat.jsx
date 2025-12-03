@@ -1,16 +1,18 @@
+import ChatMessage from "../components/chatMessage";
+
 function displayMessage(message) {
     const chatContent = document.getElementById(`chat-content`),
           timeText = new Date(message.time).toLocaleTimeString(`en-US`, { hour12: false });
-    const msgHtml = `
-        <div class="chat-message">
-            <span class="message-time">${timeText}</span>
-            <span class="message-text">${message.message}</span>
-        </div>
-    `;
+    const msgHtml = <ChatMessage username="Placeholder123" message={message.message} timestamp={timeText}/>
+    // `
+    //     <div class="chat-message">
+    //         <span class="message-time">${timeText}</span>
+    //         <span class="message-text">${message.message}</span>
+    //     </div>
+    // `;
 
     chatContent.insertAdjacentHTML(`beforeend`, msgHtml);
     chatContent.scrollTop = chatContent.scrollHeight;
-
 }
 
 function sendMessage() {
@@ -23,7 +25,8 @@ function sendMessage() {
 
     const message = {
         message: messageText,
-        time: new Date().toISOString()
+        time: new Date().toISOString(),
+        type: "lobby-msg"
     };
 
     ws.send(JSON.stringify(message));
@@ -31,7 +34,7 @@ function sendMessage() {
     messageInput.value = ``;
 }
 
-module.exports = {
+export default {
     displayMessage,
     sendMessage
 }
