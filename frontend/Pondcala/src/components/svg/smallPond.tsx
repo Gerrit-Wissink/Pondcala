@@ -1,8 +1,6 @@
-import { useState } from "react";
-import Fish from "./fish";
+import { useState, forwardRef } from "react";
 
-
-let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, count: number, highlighted?: boolean}) => {
+const SmallPond = forwardRef<SVGEllipseElement, {onClick: () => void, count: number, highlighted?: boolean}>(({onClick, count, highlighted = false}, ref) => {
     const [hovered, setHovered] = useState(false);
     
     // console.log('SmallPond rendering with count:', count);
@@ -16,8 +14,7 @@ let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, co
     }
 
     return (
-        <div>
-            <Fish />
+        <div >
             <svg 
                 viewBox={`0 0 400 150`}
                 style={{width: "100%", height: "auto", maxWidth: "400px"}}
@@ -29,6 +26,7 @@ let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, co
                     ry='75'
 
                     style={smallPondStyle}
+                    ref={ref}
 
 
                     onMouseOver={() => {setHovered(true)}}
@@ -39,6 +37,6 @@ let SmallPond = ({onClick, count, highlighted = false}: {onClick: () => void, co
             <h1 style={{color: 'white'}}>{count}</h1>
         </div>
     );
-}
+});
 
 export default SmallPond;

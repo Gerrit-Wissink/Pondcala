@@ -49,11 +49,10 @@ func VerifySession(tokenHash string) (*models.Session, error) {
 }
 
 // CreateUser creates a new user in the database
-func CreateUser(username, hashedPassword, email string) (*models.User, error) {
+func CreateUser(username, hashedPassword string) (*models.User, error) {
 	user := &models.User{
 		Username: username,
-		HashedPw: hashedPassword,
-		Email:    email,
+		Password: hashedPassword,
 		IsOnline: false,
 	}
 
@@ -72,6 +71,15 @@ func GetUser(id uint) (*models.User, error) {
 		return nil, result.Error
 	}
 	return &user, nil
+}
+
+func GetAllUsers() ([]models.User, error) {
+	var users []models.User
+	result := db.DB.Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
 }
 
 // UpdateUser updates an existing user's information

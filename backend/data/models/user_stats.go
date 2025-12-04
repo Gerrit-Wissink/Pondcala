@@ -1,11 +1,6 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 type UserStats struct {
-	gorm.Model
 	UserID      uint `json:"user_id" gorm:"primaryKey;not null"`
 	NumWins     int  `json:"num_wins" gorm:"default:0"`
 	NumLoss     int  `json:"num_loss" gorm:"default:0"`

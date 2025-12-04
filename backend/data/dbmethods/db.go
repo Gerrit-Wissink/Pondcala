@@ -17,7 +17,7 @@ func dbInit() {
 
 	//Check if it worked
 	if err != nil {
-		log.Fatal("AAAAHHH BAD STUFF", err)
+		log.Fatal("Error initializing database connection:", err)
 	}
 
 	//Optional: Update the postgres tables to reflect the models folder

@@ -46,3 +46,75 @@ func StoreUserToken(token string, user *models.User, expiresAt time.Time) (*mode
 
 	return session, nil
 }
+
+// CreateUser validates input, hashes the password and creates a new user record.
+func CreateUser(username, password string) (*models.User, error) {
+	u := Sanitize(username)
+	p := Sanitize(password)
+
+	if len(u) < 1 {
+		return nil, fmt.Errorf("username required")
+	}
+	if len(p) < 6 {
+		return nil, fmt.Errorf("password must be at least 6 characters")
+	}
+
+	hashed, err := HashPassword(p)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := dbmethods.CreateUser(u, hashed)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func FetchAllUsers() ([]*models.User, error) {
+	users, err := dbmethods.GetAllUsers()
+	if err != nil {
+		return nil, err
+	}
+	// convert to slice of pointers expected by service layer
+	out := make([]*models.User, 0, len(users))
+	for i := range users {
+		out = append(out, &users[i])
+	}
+	return out, nil
+}
+
+func GetUserByID(id uint) (*models.User, error) {
+	return dbmethods.GetUser(id)
+}
+
+func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
+	return dbmethods.UpdateUser(id, updates)
+}
+
+func HardDeleteUser(id uint) error {
+	return dbmethods.HardDeleteUser(id)
+}
+
+func DeleteUser(id uint) error {
+	return dbmethods.DeleteUser(id)
+}
+
+func UpdateUserPassword(id uint, newPassword string) error {
+	if len(newPassword) < 6 {
+		return fmt.Errorf("password too short")
+	}
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	return dbmethods.UpdateUserPassword(id, hash)
+}
+
+func UpdateUserOnlineStatus(id uint, isOnline bool) error {
+	return dbmethods.UpdateUserOnlineStatus(id, isOnline)
+}
+
+func VerifySessionHash(tokenHash string) (*models.Session, error) {
+	return dbmethods.VerifySession(tokenHash)
+}

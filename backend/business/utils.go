@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
 )
 
 func Sanitize(input string) string {
@@ -28,4 +30,26 @@ func HashToken(token string) string {
 	h := sha256.Sum256([]byte(token))
 	//convert that array to a lowercase hexadecimal string and return it
 	return fmt.Sprintf("%x", h[:])
+}
+
+func CheckGameExists(gameID uint) (bool, error) {
+	_, err := dbmethods.FetchGameByID(gameID)
+	if err != nil {
+		if err.Error() == "game not found" {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func CheckGameHasEnded(gameID uint) (bool, error) {
+	game, err := dbmethods.FetchGameByID(gameID)
+	if err != nil {
+		return false, err
+	}
+	if game.Winner != nil {
+		return true, nil
+	}
+	return false, nil
 }

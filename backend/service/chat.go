@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Gerrit-Wissink/Pondcala/backend/business"
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
 	"github.com/gorilla/websocket"
 )
@@ -48,6 +50,12 @@ type IncomingMessage struct {
 	SelectedIndex int   `json:"selectedIndex,omitempty"`
 	HostPools     []int `json:"hostPools,omitempty"`
 	OppPools      []int `json:"opponentPools,omitempty"`
+
+	// invitation-specific fields
+	Sender    uint   `json:"sender,omitempty"`
+	Recipient uint   `json:"recipient,omitempty"`
+	SentAt    string `json:"sentAt,omitempty"`
+	Status    string `json:"status,omitempty"` // e.g., "sent", "accepted", "declined", "timeout"
 }
 
 // ChatHub coordinates all chat activity.
@@ -127,6 +135,101 @@ func (h *ChatHub) Run() {
 		case inc := <-h.broadcast:
 			// Route based on message type.
 			switch inc.Type {
+			case "invite":
+				// Invitations: when status == "sent" treat as creation and forward to recipient only.
+				// For status updates (accepted/declined/timeout) broadcast to both sender and recipient.
+
+				// Determine canonical sender/recipient (clients may send Author or Sender)
+				sender := inc.Sender
+				if sender == 0 {
+					sender = inc.Author
+				}
+				recipient := inc.Recipient
+
+				// If this is a new invite, schedule a timeout that will mark it as timed out
+				if strings.ToLower(inc.Status) == "sent" {
+					// Broadcast to recipient only
+					targets := map[uint]struct{}{recipient: {}}
+
+					h.mu.RLock()
+					conns := make([]*websocket.Conn, 0)
+					for c, uid := range h.clients {
+						if _, ok := targets[uid]; ok {
+							conns = append(conns, c)
+						}
+					}
+					h.mu.RUnlock()
+
+					for _, c := range conns {
+						if err := c.WriteJSON(inc); err != nil {
+							log.Printf("Error sending invite to recipient: %v", err)
+							c.Close()
+							h.unregister <- c
+						}
+					}
+
+					// Schedule timeout (e.g., 30s). If invite still pending, send a timeout update.
+					go func(s, r uint, sentAt string) {
+						// configurable timeout
+						timeout := 30 * time.Second
+						time.Sleep(timeout)
+
+						// Emit a timeout update for this invitation
+						out := IncomingMessage{
+							Type:      "invite",
+							Sender:    s,
+							Recipient: r,
+							SentAt:    sentAt,
+							Status:    "timeout",
+						}
+						h.broadcast <- out
+					}(sender, recipient, inc.SentAt)
+
+					// Optionally persist invitations in DB here if desired
+					continue
+				}
+
+				// For updates (accepted/declined/timeout), notify both parties
+				targets := map[uint]struct{}{}
+				if sender != 0 {
+					targets[sender] = struct{}{}
+				}
+				if recipient != 0 {
+					targets[recipient] = struct{}{}
+				}
+
+				h.mu.RLock()
+				conns := make([]*websocket.Conn, 0)
+				for c, uid := range h.clients {
+					if _, ok := targets[uid]; ok {
+						conns = append(conns, c)
+					}
+				}
+				h.mu.RUnlock()
+
+				// If accepted, create a new game and include the GameID in the update
+				if strings.ToLower(inc.Status) == "accepted" {
+					// Create game where sender is host and recipient is opponent
+					if sender != 0 && recipient != 0 {
+						game, err := dbmethods.CreateGame(sender, recipient)
+						if err != nil {
+							log.Printf("Error creating game on invite accept: %v", err)
+						} else {
+							// attach GameID so clients know the game was created
+							inc.GameID = game.ID
+						}
+					}
+				}
+
+				for _, c := range conns {
+					if err := c.WriteJSON(inc); err != nil {
+						log.Printf("Error broadcasting invite update: %v", err)
+						c.Close()
+						h.unregister <- c
+					}
+				}
+
+				continue
 			case "lobby-msg":
 				// sanitize text and ignore empty messages
 				inc.Message = sanitizeMessage(inc.Message)

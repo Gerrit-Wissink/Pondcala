@@ -20,3 +20,19 @@ func SaveLobbyMessage(userID uint, message string) (*models.LobbyChat, error) {
 	}
 	return chatMessage, nil
 }
+
+func GetAllGameMessages(gameID uint) ([]models.GameChat, error) {
+	messages, err := dbmethods.FetchAllGameMessages(gameID)
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
+}
+
+func SaveGameMessage(gameID, userID uint, message string) (*models.GameChat, error) {
+	chatMessage, err := dbmethods.SaveGameMessage(gameID, userID, message)
+	if err != nil {
+		return nil, err
+	}
+	return chatMessage, nil
+}

@@ -2,12 +2,9 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type GameTurn struct {
-	gorm.Model
 	ID            uint      `json:"id" gorm:"primaryKey"`
 	GameID        uint      `json:"game_id" gorm:"not null"`
 	TurnTaker     uint      `json:"turn_taker" gorm:"not null"`
