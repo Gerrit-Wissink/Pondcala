@@ -14,7 +14,7 @@ const SmallPond = forwardRef<SVGEllipseElement, {onClick: () => void, count: num
     }
 
     return (
-        <div >
+        <div>
             <svg 
                 viewBox={`0 0 400 150`}
                 style={{width: "100%", height: "auto", maxWidth: "400px"}}

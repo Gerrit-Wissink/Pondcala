@@ -22,12 +22,12 @@ export default function Fish({scale = 1}: {scale?: number}) {
     }, []);
     
     // If scale is 1 (default), render the original SVG so existing layouts are unchanged.
-    if (!scale || scale === 1) {
+    if (scale === 1) {
         return (
             <>
                 <svg viewBox="0 -554 2132 2132" className="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000">
-                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
                 <g id="SVGRepo_iconCarrier">
                     {/* Primary Fill */}
                     <path d="M475.287 243.458c20.421-22.982 77.359-3.775 117.546 9.789 102.593 35.627 189.059 95.67 255.477 
@@ -84,8 +84,8 @@ export default function Fish({scale = 1}: {scale?: number}) {
     return (
         <div style={{ width: size, height: size, display: 'inline-block', transformOrigin: 'center' }}>
             <svg viewBox="0 -554 2132 2132" className="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000" style={{ width: '100%', height: '100%' }}>
-                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
                 <g id="SVGRepo_iconCarrier">
                     {/* Primary Fill */}
                     <path d="M475.287 243.458c20.421-22.982 77.359-3.775 117.546 9.789 102.593 35.627 189.059 95.67 255.477 

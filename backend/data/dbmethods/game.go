@@ -95,3 +95,12 @@ func GetAllGamesByUserID(userID uint) ([]models.Game, error) {
 	}
 	return games, nil
 }
+
+func GetCurrentTurnNumber(gameID uint) (int, error) {
+	var count int64
+	result := db.DB.Model(&models.GameTurn{}).Where("game_id = ?", gameID).Count(&count)
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to count turns: %w", result.Error)
+	}
+	return int(count) + 1, nil // Next turn number
+}

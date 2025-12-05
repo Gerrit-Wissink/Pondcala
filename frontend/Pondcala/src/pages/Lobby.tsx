@@ -8,29 +8,36 @@ export default function Lobby() {
     const [showFindGame, setShowFindGame] = useState(false);
 
     const lobby = (
-        <div style={{display: 'flex', flexDirection: 'row', gap: '20px'}}>
-            <button>Host a Game</button>
-            <button>Find a Game</button>
-        </div>
+        <>
+            <h1>Pondcala</h1>
+            <div style={{display: 'flex', flexDirection: 'row', gap: '20px'}}>
+                <button onClick={() => setShowHostGame(true)}>Host a Game</button>
+                <button onClick={() => setShowFindGame(true)}>Find a Game</button>
+            </div>
+        </>
     );
 
     const hostGame = (
         <div>
-            <button onClick={() => setShowHostGame(false)}>&larr; Back to Lobby</button>
             <HostGame />
         </div>
     );
     
     const findGame = (
         <div>
-            <button onClick={() => setShowFindGame(false)}>&larr; Back to Lobby</button>
             <FindGame />
         </div>
     );
     
     return (
         <>
-        <nav>
+        <nav style={{position: "fixed", top: 15, left: 15, display: "flex", gap: "10px"}}>
+            {showHostGame &&
+                <button onClick={() => setShowHostGame(false)}>&larr; Back to Lobby</button>
+            }
+            {showFindGame &&
+                <button onClick={() => setShowFindGame(false)}>&larr; Back to Lobby</button>
+            }
             <button onClick={() => {
                 console.log("Logging out...");
                 // Add logout logic here
@@ -39,7 +46,7 @@ export default function Lobby() {
             </button>
         </nav>
             <div className="">
-                <h1>Pondcala</h1>
+                
                 {showHostGame ? hostGame : showFindGame ? findGame : lobby}
                 <LobbyChat />
             </div>

@@ -28,9 +28,58 @@ function connectWebSocket() {
         console.log(event);
 
         const message = JSON.parse(event.data);
-        displayMessage(message);
+        // displayMessage(message);
+        handleMessage(message)
     }
     
+}
+
+function handleMessage(message) {
+    if (!message || !message.type) {
+        console.warn('Received malformed WS message', message);
+        return;
+    }
+
+    const t = message.type;
+    switch (t) {
+        case 'lobby-msg':
+            // display in lobby chat
+            if (typeof displayMessage === 'function') {
+                displayMessage(message);
+            } else {
+                console.log('lobby-msg', message);
+            }
+            break;
+
+        case 'game-msg':
+            // game chat targeted to players
+            window.dispatchEvent(new CustomEvent('game-msg', { detail: message }));
+            break;
+
+        case 'game-turn':
+            // game turn update (board state / turn info)
+            window.dispatchEvent(new CustomEvent('game-turn', { detail: message }));
+            break;
+
+        case 'invite':
+            // Invitation lifecycle events
+            // message.Status can be: "sent", "accepted", "declined", "timeout"
+            const status = (message.status || '').toLowerCase();
+
+            if (status === 'sent') {
+                // New invite for this client
+                window.dispatchEvent(new CustomEvent('invite-received', { detail: message }));
+            } else {
+                // Updates (accepted/declined/timeout)
+                window.dispatchEvent(new CustomEvent('invite-updated', { detail: message }));
+            }
+            break;
+
+        default:
+            // Unknown types: surface for debugging and let other code inspect
+            console.debug('Unhandled WS message type:', t, message);
+            window.dispatchEvent(new CustomEvent('ws-message', { detail: message }));
+    }
 }
 
 module.exports = {

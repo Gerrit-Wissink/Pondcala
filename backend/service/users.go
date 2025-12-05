@@ -108,6 +108,32 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func GetAllUsernames(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed. Use GET")
+		return
+	}
+
+	// usernames, err := business.FetchAllUsernames()
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, "Failed to fetch usernames: "+err.Error())
+	// 	return
+	// }
+
+	// w.WriteHeader(http.StatusOK)
+	// json.NewEncoder(w).Encode(struct {
+	// 	Success   bool     `json:"success"`
+	// 	Usernames []string `json:"usernames,omitempty"`
+	// }{
+	// 	Success:   true,
+	// 	Usernames: usernames,
+	// })
+}
+
 // CreateUserHandler handles POST /users to create a new user
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

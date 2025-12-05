@@ -32,8 +32,7 @@ body {
 }
 
 .chat-sidebar {
-	background: white;
-	opacity: 0.8;
+	background: rgba(255, 255, 255, 0.85);
 	border-radius: var(--border-radius);
 	padding: 1em;
 	box-shadow: var(--box-shadow);

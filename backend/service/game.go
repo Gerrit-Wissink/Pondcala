@@ -28,9 +28,13 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body using inline struct
 	var request struct {
-		GameID        uint `json:"game_id"`
-		UserID        uint `json:"user_id"`
-		SelectedIndex int  `json:"selected_index"`
+		GameID        uint  `json:"game_id"`
+		UserID        uint  `json:"user_id"`
+		SelectedIndex int   `json:"selected_index"`
+		HostPonds     []int `json:"host_ponds,omitempty"`
+		OpponentPonds []int `json:"opponent_ponds,omitempty"`
+		HostScore     int   `json:"host_score,omitempty"`
+		OpponentScore int   `json:"opponent_score,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid JSON payload: "+err.Error())
@@ -38,7 +42,7 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call business logic
-	gameTurn, gameState, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, nil, nil, 0, 0)
+	gameTurn, gameState, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, request.HostPonds, request.OpponentPonds, request.HostScore, request.OpponentScore)
 	if err != nil {
 		// Determine appropriate HTTP status based on error type
 		status := http.StatusInternalServerError

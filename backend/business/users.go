@@ -47,6 +47,18 @@ func StoreUserToken(token string, user *models.User, expiresAt time.Time) (*mode
 	return session, nil
 }
 
+func ValidateUserToken(token string) (*models.Session, error) {
+	hashedToken := HashToken(token)
+
+	session, err := dbmethods.VerifySession(hashedToken)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return session, nil
+}
+
 // CreateUser validates input, hashes the password and creates a new user record.
 func CreateUser(username, password string) (*models.User, error) {
 	u := Sanitize(username)
