@@ -13,7 +13,7 @@ func dbInit() {
 	//All of the database information is stringified
 	dsn := "host=localhost user=postgres password=mysecret dbname=mydb port=5432 sslmode=disable"
 	//Open a connection to the database (postgres)
-	db, err := gorm.Open(postgres.Open(dsn), gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	//Check if it worked
 	if err != nil {

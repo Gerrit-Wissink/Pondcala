@@ -204,6 +204,35 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	}{Success: true, User: user})
 }
 
+func GetUserByTokenHash(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed. Use GET")
+		return
+	}
+
+	tokenHash := r.URL.Query().Get("token_hash")
+	if tokenHash == "" {
+		writeError(w, http.StatusBadRequest, "missing token_hash query parameter")
+		return
+	}
+
+	user, err := business.GetUserByTokenHash(tokenHash)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(struct {
+		Success bool         `json:"success"`
+		User    *models.User `json:"user,omitempty"`
+	}{Success: true, User: user})
+}
+
 // UpdateUserHandler handles PUT /user?id=<id>
 func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

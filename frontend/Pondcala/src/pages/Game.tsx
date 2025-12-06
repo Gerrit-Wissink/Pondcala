@@ -4,6 +4,8 @@ import LargePond from "../components/svg/largePond";
 import YourPondRow from "../components/yourPondRow";
 import OpponentPondRow from "../components/opponentPondRow";
 import Fish from "../components/svg/fish";
+import Chat from "../components/Chat";
+import apiClient from "../utils/apiClient";
 
 export default function Game() {
     const [counts, setCounts] = useState(Array(6).fill(4));
@@ -14,6 +16,12 @@ export default function Game() {
     const [turnCounter, setTurnCounter] = useState(1);
     const [fishSize, setFishSize] = useState(1);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [animPath, setAnimPath] = useState<null | {points: {x:number,y:number}[], id: number}>(null);
+    const [gameID] = useState<string | null>(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("gameID") ?? params.get("gameId") ?? params.get("id");
+    });
+    const [turnTaker, setTurnTaker] = useState<string | null>(null);
 
     const yourPondRefs = useRef<Array<SVGEllipseElement | null>>([]);
     const opponentPondRefs = useRef<Array<SVGEllipseElement | null>>([]);
@@ -21,15 +29,102 @@ export default function Game() {
     const rightLargeRef = useRef<SVGEllipseElement | null>(null);
     const opCountsRef = useRef(opponentCounts);
 
-    const [animPath, setAnimPath] = useState<null | {points: {x:number,y:number}[], id: number}>(null);
     const animationCleanupRef = useRef<number | null>(null);
+
+    const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
 
     const whiteOnBlack = {background: '#000000A6', color: "white", padding: "10px", borderRadius: "15px", margin: "5px"};
 
+    useEffect(() => {
+        document.title = "Pondcala Game";
+    }, []);
+
+    useEffect(() => {
+        async function fetchUserByToken() {
+            try {
+                const token = localStorage.getItem("token") || "";
+                apiClient.get(`/api/users/token?token=${token}`).then(response => {
+                    const user = response.data.User;
+                    console.log("Fetched user by token:", user);
+                    if (user && user.id) {
+                        // Successfully fetched user
+                        localStorage.setItem("user", JSON.stringify(user));
+                    } else {
+                        // Invalid token, redirect to login
+                        window.location.href = "/login";
+                    }
+                }).catch(error => {
+                    console.error("Error fetching user by token:", error);
+                    window.location.href = "/login";
+                });
+            } catch (error) {
+                console.error("Error in fetchUserByToken:", error);
+                window.location.href = "/login";
+            }
+        }
+        if (!currentUser || !currentUser.id) {
+            fetchUserByToken();
+        }
+    }, []);
+
+    useEffect(() => {
+         async function fetchGameState() {
+            // Placeholder for fetching game state from server
+            try {
+                const result = await apiClient.get(`/game/state?gameID=${gameID}`);
+                const gameState = result.data.game_state;
+                console.log("Fetched game state:", gameState);
+                if (!currentUser || !currentUser.id || currentUser.id !== gameState.Host.id && currentUser.id !== gameState.Opponent.id) {
+                    alert("You are not a participant in this game.");
+                    window.location.href = "/";
+                    return;
+                }
+                setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                setCounts(currentUser.id === gameState.Host.id ? gameState.HostPonds : gameState.OpponentPonds);
+                setOpponentCounts(currentUser.id === gameState.Host.id ? gameState.OpponentPonds : gameState.HostPonds);
+                setYourScore(currentUser.id === gameState.Host.id ? gameState.HostScore : gameState.OpponentScore);
+            }catch (error) {
+                console.error("Error fetching game state:", error);
+            }
+        }
+        fetchGameState();
+    }, []);
+    
+    
     // Keep ref in sync with state
     useEffect(() => {
         opCountsRef.current = opponentCounts;
     }, [opponentCounts]);
+
+    useEffect(() => {
+        return () => {
+            // Cleanup on unmount
+            if (animationCleanupRef.current) {
+                clearTimeout(animationCleanupRef.current);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if(counts.length === 0 || opponentCounts.length === 0) return;
+        const yourPondsTotal = counts.reduce((a,b) => a + b, 0);
+        const opponentPondsTotal = opponentCounts.reduce((a,b) => a + b, 0);
+        if (yourPondsTotal === 0 || opponentPondsTotal === 0) {
+            alert("Game Over! Final Score: " + yourScore);
+            // Reset game state
+            // setCounts(Array(6).fill(4));
+            // setOpponentCounts(Array(6).fill(4));
+            // setYourScore(0);
+            // setTurnCounter(1);
+        }
+    }, [turnCounter]);
+
+    
+    function handleEndOfGame() {
+        // Placeholder for end-of-game logic
+        //Need to clear out remaining fish and update scores
+        //Then send websocket message to server about game end
+    }
 
     // triggerAnimate computes center points and starts overlay animation
     function triggerAnimate(fromEl: HTMLElement | SVGElement | null, toEl: HTMLElement | SVGElement | null, fishRemaining: number) {
@@ -256,11 +351,11 @@ export default function Game() {
     const baseSize = 40;
 
     return (
-        <>
+        <div style={{width: "80%"}}>
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row'}}>
             {/* Use 8-digit hex (#RRGGBBAA) for background alpha so only the background is translucent */}
             <div style={whiteOnBlack}>
-                <h2>Opponent Name</h2>
+                <h2>{turnTaker}</h2>
                 <h2>Turn Timer</h2>
             </div>
             <h1 style={whiteOnBlack}>Turn {turnCounter}</h1>
@@ -280,6 +375,7 @@ export default function Game() {
             </div>
             <LargePond ref={rightLargeRef} score={yourScore} />
         </div>
+        <Chat type="game" />
 
         {/* Overlay animator (absolute) */}
         {animPath && (
@@ -311,6 +407,6 @@ export default function Game() {
             </div>
         )}
 
-        </>
+        </div>
     );
 }

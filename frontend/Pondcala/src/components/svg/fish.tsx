@@ -83,6 +83,7 @@ export default function Fish({scale = 1}: {scale?: number}) {
 
     return (
         <div style={{ width: size, height: size, display: 'inline-block', transformOrigin: 'center' }}>
+            <p style={{background: '#000000A6', color: "white"}}>{scale}</p>
             <svg viewBox="0 -554 2132 2132" className="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000" style={{ width: '100%', height: '100%' }}>
                 <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
                 <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>

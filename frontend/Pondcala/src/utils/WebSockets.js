@@ -1,4 +1,4 @@
-import { displayMessage } from "./Chat";
+import { displayLobbyMessage } from "./Chat";
 
 let ws;
 
@@ -44,8 +44,18 @@ function handleMessage(message) {
     switch (t) {
         case 'lobby-msg':
             // display in lobby chat
+            /* 
+                type LobbyChatMessage struct {
+                    Message string `json:"message"`
+                    Time    string `json:"time"`
+                    Author  uint   `json:"author"`
+                }
+            */
             if (typeof displayMessage === 'function') {
-                displayMessage(message);
+                const messageText = message.message;
+                const author = message.author;
+                const timestamp = message.time;
+                displayLobbyMessage(messageText, author, timestamp);
             } else {
                 console.log('lobby-msg', message);
             }
@@ -59,6 +69,12 @@ function handleMessage(message) {
         case 'game-turn':
             // game turn update (board state / turn info)
             window.dispatchEvent(new CustomEvent('game-turn', { detail: message }));
+            break;
+
+        case 'game-end':
+            // game end notification (Win or Forfeit)
+            // message contains: sender, time, players, reason ("Win" or "Forfeit")
+            window.dispatchEvent(new CustomEvent('game-end', { detail: message }));
             break;
 
         case 'invite':

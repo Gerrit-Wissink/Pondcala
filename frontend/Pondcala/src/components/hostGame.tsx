@@ -10,7 +10,7 @@ export default function HostGame() {
     
     // useEffect(() => {
     //     // Fetch available players from the server
-    //     apiClient.get('/users/getAllUsernames')
+    //     apiClient.get('/api/users/usernames')
     //         .then(response => {
     //             setAvailablePlayers(response.data.players);
     //         })

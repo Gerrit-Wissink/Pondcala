@@ -13,11 +13,12 @@ func main() {
 
 	// Public endpoint (no auth required)
 	mux.HandleFunc("/login", Login)
+	mux.HandleFunc("/createAccount", CreateUserHandler) // POST - create new user
 
 	// Protected API endpoints - User management
+	mux.HandleFunc("/api/users/token", GetUserByTokenHash)         // GET - get user by token hash
 	mux.HandleFunc("/api/users", GetAllUsers)                      // GET - fetch all users
 	mux.HandleFunc("/api/users/usernames", GetAllUsernames)        // GET - fetch all usernames
-	mux.HandleFunc("/api/users/create", CreateUserHandler)         // POST - create new user
 	mux.HandleFunc("/api/users/get", GetUserHandler)               // GET - get user by id
 	mux.HandleFunc("/api/users/update", UpdateUserHandler)         // PUT - update user
 	mux.HandleFunc("/api/users/delete", DeleteUserHandler)         // DELETE - delete user

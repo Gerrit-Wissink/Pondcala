@@ -87,6 +87,16 @@ func FetchWhoseTurnItIs(gameID uint) (uint, error) {
 	}
 }
 
+func FetchCurrentBoardState(gameID uint) (hostPonds []int, opponentPonds []int, hostScore int, opponentScore int, err error) {
+	var lastTurn models.GameTurn
+	result := db.DB.Where("game_id = ?", gameID).Order("timestamp desc").First(&lastTurn)
+	if result.Error != nil {
+		return nil, nil, 0, 0, fmt.Errorf("failed to fetch last turn: %w", result.Error)
+	}
+
+	return lastTurn.HostPonds, lastTurn.OpponentPonds, lastTurn.HostScore, lastTurn.OpponentScore, nil
+}
+
 func GetAllGamesByUserID(userID uint) ([]models.Game, error) {
 	var games []models.Game
 	result := db.DB.Where("host_id = ? OR opponent_id = ?", userID, userID).Find(&games)
@@ -103,4 +113,14 @@ func GetCurrentTurnNumber(gameID uint) (int, error) {
 		return 0, fmt.Errorf("failed to count turns: %w", result.Error)
 	}
 	return int(count) + 1, nil // Next turn number
+}
+
+func GetPlayers(gameID uint) (host models.User, opponent models.User, err error) {
+	var game models.Game
+	result := db.DB.Preload("Host").Preload("Opponent").Where("id = ?", gameID).First(&game)
+	if result.Error != nil {
+		return models.User{}, models.User{}, fmt.Errorf("failed to fetch game: %w", result.Error)
+	}
+
+	return game.Host, game.Opponent, nil
 }

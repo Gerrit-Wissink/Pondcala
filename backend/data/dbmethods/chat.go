@@ -10,7 +10,7 @@ import (
 
 func FetchAllLobbyMessages() ([]models.LobbyChat, error) {
 	var messages []models.LobbyChat
-	result := db.DB.Order("Timestamp asc").Find(&messages).Limit(250)
+	result := db.DB.Order("timestamp asc").Limit(250).Find(&messages)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch lobby messages: %w", result.Error)
 	}

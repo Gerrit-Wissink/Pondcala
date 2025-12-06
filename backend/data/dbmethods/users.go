@@ -73,6 +73,31 @@ func GetUser(id uint) (*models.User, error) {
 	return &user, nil
 }
 
+func GetUserByUsername(username string) (*models.User, error) {
+	var user models.User
+	result := db.DB.Where("username = ?", username).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func GetUserByTokenHash(tokenHash string) (*models.User, error) {
+	var session models.Session
+	result := db.DB.Where("token_hash = ?", tokenHash).First(&session)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to find session: %w", result.Error)
+	}
+
+	var user models.User
+	result = db.DB.First(&user, session.UserID)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to find user: %w", result.Error)
+	}
+
+	return &user, nil
+}
+
 func GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	result := db.DB.Find(&users)

@@ -31,6 +31,29 @@ type LobbyChatMessage struct {
 	Author  uint   `json:"author"`
 }
 
+type GameChatMessage struct {
+	Message string `json:"message"`
+	Time    string `json:"time"`
+	Author  uint   `json:"author"`
+	Players []uint `json:"players"`
+}
+
+type GameTurnMessage struct {
+	GameID        uint   `json:"gameId"`
+	TurnTaker     uint   `json:"turnTaker"`
+	SelectedIndex int    `json:"selectedIndex"`
+	HostPools     []int  `json:"hostPools"`
+	OppPools      []int  `json:"opponentPools"`
+	Players       []uint `json:"players"`
+}
+
+type GameEndMessage struct {
+	Sender  uint   `json:"sender"`
+	Time    string `json:"time"`
+	Players []uint `json:"players"`
+	Reason  string `json:"reason"` // "Win" or "Forfeit"
+}
+
 // IncomingMessage is a union type that represents the different message
 // payloads the client can send. Fields are optional and used depending
 // on the `Type` value.
@@ -56,6 +79,9 @@ type IncomingMessage struct {
 	Recipient uint   `json:"recipient,omitempty"`
 	SentAt    string `json:"sentAt,omitempty"`
 	Status    string `json:"status,omitempty"` // e.g., "sent", "accepted", "declined", "timeout"
+
+	// game-end specific fields
+	Reason string `json:"reason,omitempty"` // "Win" or "Forfeit"
 }
 
 // ChatHub coordinates all chat activity.
@@ -311,6 +337,31 @@ func (h *ChatHub) Run() {
 				for _, c := range conns {
 					if err := c.WriteJSON(inc); err != nil {
 						log.Printf("Error routing game-turn: %v", err)
+						c.Close()
+						h.unregister <- c
+					}
+				}
+
+			case "game-end":
+				// game-end: notify all players in the game that the game has ended
+				// Reason should be "Win" or "Forfeit"
+				targets := make(map[uint]struct{}, len(inc.Players))
+				for _, id := range inc.Players {
+					targets[id] = struct{}{}
+				}
+
+				h.mu.RLock()
+				conns := make([]*websocket.Conn, 0)
+				for c, uid := range h.clients {
+					if _, ok := targets[uid]; ok {
+						conns = append(conns, c)
+					}
+				}
+				h.mu.RUnlock()
+
+				for _, c := range conns {
+					if err := c.WriteJSON(inc); err != nil {
+						log.Printf("Error routing game-end: %v", err)
 						c.Close()
 						h.unregister <- c
 					}

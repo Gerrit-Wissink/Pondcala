@@ -42,7 +42,7 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call business logic
-	gameTurn, gameState, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, request.HostPonds, request.OpponentPonds, request.HostScore, request.OpponentScore)
+	gameTurn, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, request.HostPonds, request.OpponentPonds, request.HostScore, request.OpponentScore)
 	if err != nil {
 		// Determine appropriate HTTP status based on error type
 		status := http.StatusInternalServerError
@@ -62,15 +62,13 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 	// Success response using inline struct
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(struct {
-		Success   bool             `json:"success"`
-		Message   string           `json:"message"`
-		GameTurn  *models.GameTurn `json:"game_turn,omitempty"`
-		GameState *models.Game     `json:"game_state,omitempty"`
+		Success  bool             `json:"success"`
+		Message  string           `json:"message"`
+		GameTurn *models.GameTurn `json:"game_turn,omitempty"`
 	}{
-		Success:   true,
-		Message:   "Turn processed successfully",
-		GameTurn:  gameTurn,
-		GameState: gameState,
+		Success:  true,
+		Message:  "Turn processed successfully",
+		GameTurn: gameTurn,
 	})
 }
 
@@ -99,6 +97,19 @@ func getGameState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call business logic to fetch game state
+	/*
+		   GameState:
+		   struct {
+				WhoseTurn     uint
+				Host          models.User
+				Opponent      models.User
+				HostPonds     []int
+				OpponentPonds []int
+				HostScore     int
+				OpponentScore int
+				LastTwoTurns  []models.GameTurn
+			}
+	*/
 	game, err := business.FetchGameStateByID(uint(gameID))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to fetch game state: "+err.Error())
@@ -108,8 +119,8 @@ func getGameState(w http.ResponseWriter, r *http.Request) {
 	// Success response using inline struct
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(struct {
-		Success   bool         `json:"success"`
-		GameState *models.Game `json:"game_state,omitempty"`
+		Success   bool        `json:"success"`
+		GameState interface{} `json:"game_state,omitempty"`
 	}{
 		Success:   true,
 		GameState: game,

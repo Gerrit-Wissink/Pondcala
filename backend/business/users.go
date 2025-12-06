@@ -130,3 +130,7 @@ func UpdateUserOnlineStatus(id uint, isOnline bool) error {
 func VerifySessionHash(tokenHash string) (*models.Session, error) {
 	return dbmethods.VerifySession(tokenHash)
 }
+
+func GetUserByTokenHash(tokenHash string) (*models.User, error) {
+	return dbmethods.GetUserByTokenHash(tokenHash)
+}

@@ -26,6 +26,20 @@ func HashPassword(input string) (string, error) {
 	return string(hashBytes), nil
 }
 
+func CheckUsernameUniqueness(username string) (bool, error) {
+	user, err := dbmethods.GetUserByUsername(username)
+	if err != nil {
+		if err.Error() == "user not found" {
+			return true, nil // Username is unique
+		}
+		return false, err // Some other error occurred
+	}
+	if user != nil {
+		return false, nil // Username already exists
+	}
+	return true, nil // Username is unique
+}
+
 func HashToken(token string) string {
 	//generate an array of random bytes using sha256 with your token
 	h := sha256.Sum256([]byte(token))
