@@ -108,7 +108,7 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func GetAllUsernames(w http.ResponseWriter, r *http.Request) {
+func GetAllUsersOnline(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -118,20 +118,20 @@ func GetAllUsernames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// usernames, err := business.FetchAllUsernames()
-	// if err != nil {
-	// 	writeError(w, http.StatusInternalServerError, "Failed to fetch usernames: "+err.Error())
-	// 	return
-	// }
+	users, err := business.FetchAllUsersOnline()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to fetch users: "+err.Error())
+		return
+	}
 
-	// w.WriteHeader(http.StatusOK)
-	// json.NewEncoder(w).Encode(struct {
-	// 	Success   bool     `json:"success"`
-	// 	Usernames []string `json:"usernames,omitempty"`
-	// }{
-	// 	Success:   true,
-	// 	Usernames: usernames,
-	// })
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(struct {
+		Success bool           `json:"success"`
+		Users   []*models.User `json:"users,omitempty"`
+	}{
+		Success: true,
+		Users:   users,
+	})
 }
 
 // CreateUserHandler handles POST /users to create a new user

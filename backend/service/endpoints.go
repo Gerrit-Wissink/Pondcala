@@ -16,23 +16,25 @@ func main() {
 	mux.HandleFunc("/createAccount", CreateUserHandler) // POST - create new user
 
 	// Protected API endpoints - User management
-	mux.HandleFunc("/api/users/token", GetUserByTokenHash)         // GET - get user by token hash
-	mux.HandleFunc("/api/users", GetAllUsers)                      // GET - fetch all users
-	mux.HandleFunc("/api/users/usernames", GetAllUsernames)        // GET - fetch all usernames
-	mux.HandleFunc("/api/users/get", GetUserHandler)               // GET - get user by id
-	mux.HandleFunc("/api/users/update", UpdateUserHandler)         // PUT - update user
-	mux.HandleFunc("/api/users/delete", DeleteUserHandler)         // DELETE - delete user
-	mux.HandleFunc("/api/users/password", UpdatePasswordHandler)   // PUT - update password
-	mux.HandleFunc("/api/users/online", UpdateOnlineStatusHandler) // PUT - update online status
+	mux.HandleFunc("/api/users/token", GetUserByTokenHash)             // GET - get user by token hash
+	mux.HandleFunc("/api/users", GetAllUsers)                          // GET - fetch all users
+	mux.HandleFunc("/api/users/online", GetAllUsersOnline)             // GET - fetch all online users
+	mux.HandleFunc("/api/users/get", GetUserHandler)                   // GET - get user by id
+	mux.HandleFunc("/api/users/update", UpdateUserHandler)             // PUT - update user
+	mux.HandleFunc("/api/users/delete", DeleteUserHandler)             // DELETE - delete user
+	mux.HandleFunc("/api/users/password", UpdatePasswordHandler)       // PUT - update password
+	mux.HandleFunc("/api/users/set_online", UpdateOnlineStatusHandler) // PUT - update online status
 
 	// Protected API endpoints - Chat
 	mux.HandleFunc("/api/chat/lobby", GetAllLobbyMessages)     // GET - fetch lobby messages
+	mux.HandleFunc("/api/chat/game", GetAllGameMessages)       // GET - fetch game messages
 	mux.HandleFunc("/api/chat/history", GetChatHistoryHandler) // GET - fetch chat history
 	mux.HandleFunc("/ws/chat", ChatHandler)                    // WebSocket - chat connection
 
 	// Protected API endpoints - Game
-	mux.HandleFunc("/api/game/turn", TakeTurn)      // POST - take a turn
-	mux.HandleFunc("/api/game/state", getGameState) // GET - get game state
+	mux.HandleFunc("/api/game/turn", TakeTurn)                  // POST - take a turn
+	mux.HandleFunc("/api/game/state", getGameState)             // GET - get game state
+	mux.HandleFunc("/api/game/user-games", GetAllGamesByUserID) // GET - fetch all games for a user
 
 	// Apply middleware to all routes except login
 	mw := AuthMiddleware(mux)

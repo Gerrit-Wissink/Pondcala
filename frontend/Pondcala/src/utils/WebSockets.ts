@@ -1,10 +1,10 @@
-import { displayLobbyMessage } from "./Chat";
+import { displayLobbyMessage } from "./ChatHandler";
 
-let ws;
+let ws: WebSocket | null = null;
 
-function connectWebSocket() {
-    const protocol = window.location.protocol === `https:` ? `wss:` : `ws:`,
-          wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+function connectWebSocket(): void {
+    const protocol = window.location.protocol === `https:` ? `wss:` : `ws:`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
     
     ws = new WebSocket(wsUrl);
 
@@ -29,12 +29,12 @@ function connectWebSocket() {
 
         const message = JSON.parse(event.data);
         // displayMessage(message);
-        handleMessage(message)
-    }
+        handleMessage(message);
+    };
     
 }
 
-function handleMessage(message) {
+function handleMessage(message: any): void {
     if (!message || !message.type) {
         console.warn('Received malformed WS message', message);
         return;
@@ -51,7 +51,7 @@ function handleMessage(message) {
                     Author  uint   `json:"author"`
                 }
             */
-            if (typeof displayMessage === 'function') {
+            if (typeof displayLobbyMessage === 'function') {
                 const messageText = message.message;
                 const author = message.author;
                 const timestamp = message.time;
@@ -98,6 +98,22 @@ function handleMessage(message) {
     }
 }
 
-module.exports = {
-    connectWebSocket
+function sendMessage(message: any): boolean {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+        return true;
+    } else {
+        console.warn('WebSocket is not connected. Message not sent:', message);
+        return false;
+    }
+}
+
+function getWebSocket(): WebSocket | null {
+    return ws;
+}
+
+export {
+    connectWebSocket,
+    sendMessage,
+    getWebSocket
 };

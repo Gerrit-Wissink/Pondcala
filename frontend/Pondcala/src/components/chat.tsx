@@ -1,11 +1,44 @@
 import "./lobbyChat.css"
+import ChatMessage from "./chatMessage";
+import apiClient from "../utils/apiClient";
+import { sendGameChatMessage, sendLobbyChatMessage } from "../utils/ChatHandler";
+import {useState, useEffect} from "react";
 
-export default function Chat({type}: {type?: string}) {
+export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
+    
+    const [messages, setMessages] = useState([]);
+    const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
+
+    useEffect(() => {
+        // Placeholder: Fetch initial chat messages from server
+        const fetchMessages = async () => {
+            // Simulate fetching messages
+            try {
+                const path = type === "game" && gameID ? "/api/chat/game?gameID=" + gameID : "/api/chat/lobby";
+                const response = await apiClient.get(path);
+                setMessages(response.data.messages || []);
+            } catch (error) {
+                console.error("Error fetching chat messages:", error);
+            }
+        };
+
+        fetchMessages();
+    }, [])
+
+    function handleSendButtonClick() {
+        if (type === "lobby") {
+            sendLobbyChatMessage(currentUser ? currentUser.id : 0);
+        } else if (type === "game") {
+            sendGameChatMessage(gameID ? gameID : 0, currentUser ? currentUser.id : 0, []);
+        }
+    }
+    
+    
     const primaryColor = '#ff9800';
     const borderColor = '#444';
     const backgroundColor = '#fff';
-    const borderRadius = '0.5em';
-    const boxShadow = '0 0.25em 0.5em rgba(0, 0, 0, 0.1)';
+    // const borderRadius = '0.5em';
+    // const boxShadow = '0 0.25em 0.5em rgba(0, 0, 0, 0.1)';
 
     const chatSidebarStyle: React.CSSProperties = {
         // position: 'fixed',
@@ -75,16 +108,26 @@ export default function Chat({type}: {type?: string}) {
         // transition: 'background 0.15s ease, color 0.15s ease',
     };
 
+    const idPrefix = type === "game" && gameID ? `game-${gameID}` : type === "lobby" ? "lobby" : "global";
+
     return (
         <>
             <aside style={chatSidebarStyle}>
                 <h2 style={chatHeaderStyle}>Lobby Chat</h2>
-                <div id={`${type}-chat-content`} style={chatContentStyle}>
+                <div id={`${idPrefix}-chat-content`} style={chatContentStyle}>
                     {/* <!-- Chat messages will appear here --> */}
+                    {messages.map((msg: any) => (
+                        <ChatMessage 
+                            key={msg.id} 
+                            authorID={msg.sender} 
+                            message={msg.content} 
+                            timestamp={msg.timestamp} 
+                        />
+                    ))}
                 </div>
                 <div style={chatInputAreaStyle}>
                     <textarea 
-                        id={`${type}-chat-message`} 
+                        id={`${idPrefix}-chat-message`} 
                         placeholder="Type a message..."
                         style={textareaStyle}
                         onFocus={(e) => {
@@ -97,7 +140,7 @@ export default function Chat({type}: {type?: string}) {
                         }}
                     />
                     <button 
-                        id={`${type}-send-btn`} 
+                        id={`${idPrefix}-send-btn`} 
                         title="Send message"
                         style={buttonStyle}
                         onMouseEnter={(e) => {
@@ -108,6 +151,7 @@ export default function Chat({type}: {type?: string}) {
                             e.currentTarget.style.background = backgroundColor;
                             e.currentTarget.style.color = '';
                         }}
+                        onClick={handleSendButtonClick}
                     >
                         ⌯⌲
                     </button>

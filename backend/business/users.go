@@ -96,6 +96,19 @@ func FetchAllUsers() ([]*models.User, error) {
 	return out, nil
 }
 
+func FetchAllUsersOnline() ([]*models.User, error) {
+	users, err := dbmethods.GetAllUsersOnline()
+	if err != nil {
+		return nil, err
+	}
+	// convert to slice of pointers expected by service layer
+	out := make([]*models.User, 0, len(users))
+	for i := range users {
+		out = append(out, &users[i])
+	}
+	return out, nil
+}
+
 func GetUserByID(id uint) (*models.User, error) {
 	return dbmethods.GetUser(id)
 }

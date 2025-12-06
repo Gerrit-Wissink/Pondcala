@@ -1,4 +1,6 @@
-export default function ChatMessage({username, message, timestamp}: {username: string, message: string, timestamp: string}) {
+import { getUsername } from "../utils/UserCache";
+
+export default function ChatMessage({authorID, message, timestamp}: {authorID: string, message: string, timestamp: string}) {
     const chatMessageStyle: React.CSSProperties = {
         padding: '0.5em',
         background: '#f5f5f5',
@@ -21,7 +23,7 @@ export default function ChatMessage({username, message, timestamp}: {username: s
 
     return (
         <div style={chatMessageStyle}>
-            <strong>{username}:</strong> <span style={messageTextStyle}>{message}</span> <em style={messageTimeStyle}>({timestamp})</em>
+            <strong>{getUsername(parseInt(authorID))}:</strong> <span style={messageTextStyle}>{message}</span> <em style={messageTimeStyle}>({timestamp})</em>
         </div>
     );
 }

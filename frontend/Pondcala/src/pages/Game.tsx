@@ -5,7 +5,9 @@ import YourPondRow from "../components/yourPondRow";
 import OpponentPondRow from "../components/opponentPondRow";
 import Fish from "../components/svg/fish";
 import Chat from "../components/Chat";
-import apiClient from "../utils/apiClient";
+import LoadingModal from "../components/loadingModal";
+import apiClient, { getCookie } from "../utils/apiClient";
+import { sendMessage, connectWebSocket, getWebSocket } from "../utils/WebSockets";
 
 export default function Game() {
     const [counts, setCounts] = useState(Array(6).fill(4));
@@ -22,6 +24,10 @@ export default function Game() {
         return params.get("gameID") ?? params.get("gameId") ?? params.get("id");
     });
     const [turnTaker, setTurnTaker] = useState<string | null>(null);
+    const [isHost, setIsHost] = useState<boolean>(false);
+    const [players, setPlayers] = useState<number[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const loadingTimeoutRef = useRef<number | null>(null);
 
     const yourPondRefs = useRef<Array<SVGEllipseElement | null>>([]);
     const opponentPondRefs = useRef<Array<SVGEllipseElement | null>>([]);
@@ -32,11 +38,21 @@ export default function Game() {
     const animationCleanupRef = useRef<number | null>(null);
 
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
-
+    
     const whiteOnBlack = {background: '#000000A6', color: "white", padding: "10px", borderRadius: "15px", margin: "5px"};
 
     useEffect(() => {
         document.title = "Pondcala Game";
+    }, []);
+
+    useEffect(() => {
+        const token = getCookie("session_token") || localStorage.getItem("token");
+        if (token && token.length > 0) {
+            const existingWs = getWebSocket();
+            if (!existingWs || existingWs.readyState === WebSocket.CLOSED) {
+                connectWebSocket();
+            }
+        }
     }, []);
 
     useEffect(() => {
@@ -71,7 +87,7 @@ export default function Game() {
          async function fetchGameState() {
             // Placeholder for fetching game state from server
             try {
-                const result = await apiClient.get(`/game/state?gameID=${gameID}`);
+                const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;
                 console.log("Fetched game state:", gameState);
                 if (!currentUser || !currentUser.id || currentUser.id !== gameState.Host.id && currentUser.id !== gameState.Opponent.id) {
@@ -79,10 +95,13 @@ export default function Game() {
                     window.location.href = "/";
                     return;
                 }
+                const isHostPlayer = currentUser.id === gameState.Host.id;
+                setIsHost(isHostPlayer);
+                setPlayers([gameState.Host.id, gameState.Opponent.id]);
                 setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
-                setCounts(currentUser.id === gameState.Host.id ? gameState.HostPonds : gameState.OpponentPonds);
-                setOpponentCounts(currentUser.id === gameState.Host.id ? gameState.OpponentPonds : gameState.HostPonds);
-                setYourScore(currentUser.id === gameState.Host.id ? gameState.HostScore : gameState.OpponentScore);
+                setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
+                setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
+                setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
             }catch (error) {
                 console.error("Error fetching game state:", error);
             }
@@ -96,11 +115,70 @@ export default function Game() {
         opCountsRef.current = opponentCounts;
     }, [opponentCounts]);
 
+    // Listen for game-turn WebSocket messages
+    useEffect(() => {
+        const handleGameTurn = async (event: CustomEvent) => {
+            const turnData = event.detail;
+            console.log("Received game-turn message:", turnData);
+            
+            // Clear the loading timeout if it exists
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+                loadingTimeoutRef.current = null;
+            }
+            setLoading(false);
+            
+            // Determine if this turn was taken by the current user or opponent
+            const isTurnTaker = turnData.turnTaker === currentUser?.id;
+            
+            // Animate the turn
+            await animateTurn(turnData, isTurnTaker);
+            
+            // Update board state from WebSocket message
+            if (isHost) {
+                setCounts(turnData.hostPools);
+                setOpponentCounts(turnData.opponentPools);
+                setYourScore(turnData.hostScore || 0);
+            } else {
+                setCounts(turnData.opponentPools);
+                setOpponentCounts(turnData.hostPools);
+                setYourScore(turnData.opponentScore || 0);
+            }
+            
+            // Update whose turn it is
+            if (turnData.whoseTurn) {
+                fetchGameStateForTurn(turnData.whoseTurn);
+            }
+            
+            setTurnCounter(prev => prev + 1);
+            setIsAnimating(false);
+        };
+
+        const fetchGameStateForTurn = async (whoseTurnId: number) => {
+            try {
+                const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
+                const gameState = result.data.game_state;
+                setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+            } catch (error) {
+                console.error("Error fetching game state for turn:", error);
+            }
+        };
+
+        window.addEventListener('game-turn', handleGameTurn as any);
+        
+        return () => {
+            window.removeEventListener('game-turn', handleGameTurn as any);
+        };
+    }, [gameID, isHost, currentUser]);
+
     useEffect(() => {
         return () => {
             // Cleanup on unmount
             if (animationCleanupRef.current) {
                 clearTimeout(animationCleanupRef.current);
+            }
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
             }
         }
     }, []);
@@ -119,11 +197,57 @@ export default function Game() {
         }
     }, [turnCounter]);
 
+
+
     
     function handleEndOfGame() {
         // Placeholder for end-of-game logic
         //Need to clear out remaining fish and update scores
         //Then send websocket message to server about game end
+    }
+
+    async function SendTurn(index: number) {
+        // Send turn via WebSocket instead of HTTP endpoint
+        try {
+            const token = localStorage.getItem("token") ?? getCookie("session_token");
+            if (!token) {
+                throw new Error("No authentication token found");
+            }
+
+            const username = currentUser.username;
+            if (username !== turnTaker) {
+                throw new Error("It's not your turn");
+            }
+            
+            // Send WebSocket message
+            const message = {
+                type: "game-turn",
+                gameId: parseInt(gameID || "0"),
+                turnTaker: currentUser.id,
+                selectedIndex: index,
+                hostPools: isHost ? counts : opponentCounts,
+                opponentPools: isHost ? opponentCounts : counts,
+                userScore: yourScore,
+                players: players,
+            };
+            
+            const sent = sendMessage(message);
+            if (!sent) {
+                throw new Error("WebSocket not connected");
+            }
+            
+            // Show loading modal after a short delay (e.g., 300ms)
+            // This prevents the modal from flashing if the response is very quick
+            loadingTimeoutRef.current = setTimeout(() => {
+                setLoading(true);
+            }, 300) as unknown as number;
+            
+            console.log("Turn sent via WebSocket:", message);
+            return true;
+        } catch (error) {
+            console.error("Error sending turn:", error);
+            return false;
+        }
     }
 
     // triggerAnimate computes center points and starts overlay animation
@@ -184,100 +308,158 @@ export default function Game() {
         return pts;
     }
 
-    // Handle pond click - initiate turn
+    // Handle pond click - initiate turn (no animation, server will send back validated turn)
     async function handlePondClick(index: number) {
         if (isAnimating) return; // Prevent multiple animations at once
         
         console.log('Take turn called');
-        setIsAnimating(true);
+        setIsAnimating(true); // Set animating flag immediately
         
-        // This points to ONE of the ponds in the counts array
-        const fishToMove = counts[index];
-        // lastSourceIndex tracks the current source element for animation (fromEl of the arc)
-        let lastSourceIndex = index;
+        const turnSent = await SendTurn(index);
+        if (!turnSent) {
+            console.error("Failed to send turn");
+            setIsAnimating(false);
+            return;
+        }
         
-        // Sync ref with current state at start of turn
-        opCountsRef.current = [...opponentCounts];
+        // Don't animate here - wait for server response via handleGameTurn
+        // The animation will be triggered when the WebSocket message arrives
+    }
+
+    // Animate a turn based on server data
+    async function animateTurn(turnData: any, isTurnTaker: boolean): Promise<void> {
+        console.log("Animating turn:", turnData, "isTurnTaker:", isTurnTaker);
         
-        // Clear the selected pond immediately
-        setCounts((prev) => {
+        const selectedIndex = turnData.selectedIndex;
+        
+        // Determine the before/after states to figure out fish movement
+        // We need to simulate the turn to know the animation path
+        
+        // Get the previous state (before this turn)
+        const prevHostPonds = isTurnTaker 
+            ? (isHost ? counts : opponentCounts)
+            : (isHost ? opponentCounts : counts);
+        
+        // Calculate fish to move
+        const fishToMove = prevHostPonds[selectedIndex];
+        if (fishToMove === 0) return; // No animation if no fish
+        
+        // Determine whose ponds to use for animation
+        const animateAsYou = isTurnTaker;
+        
+        // Sync ref with current opponent state
+        opCountsRef.current = [...(animateAsYou ? opponentCounts : counts)];
+        
+        // Perform the animation
+        await animatedMoveFishGeneric(
+            selectedIndex,
+            fishToMove,
+            animateAsYou
+        );
+    }
+
+    // Generic animation function that works for both your turn and opponent turn
+    async function animatedMoveFishGeneric(
+        selectedIndex: number,
+        fishCount: number,
+        animateAsYourTurn: boolean
+    ): Promise<void> {
+        console.log("Animating generic:", selectedIndex, fishCount, "asYourTurn:", animateAsYourTurn);
+        
+        let currentIndex = selectedIndex + 1;
+        let remainingFish = fishCount;
+        let lastSourceIndex = selectedIndex;
+        
+        // Get references based on whose turn we're animating
+        const playerPondRefs = animateAsYourTurn ? yourPondRefs : opponentPondRefs;
+        const opponentPlayerPondRefs = animateAsYourTurn ? opponentPondRefs : yourPondRefs;
+        const playerLargePond = animateAsYourTurn ? rightLargeRef : leftLargeRef;
+        const setPlayerHighlighted = animateAsYourTurn ? setYourHighlighted : setOpHighlighted;
+        const setOpponentPlayerHighlighted = animateAsYourTurn ? setOpHighlighted : setYourHighlighted;
+        const setPlayerCounts = animateAsYourTurn ? setCounts : setOpponentCounts;
+        const setOpponentPlayerCounts = animateAsYourTurn ? setOpponentCounts : setCounts;
+        
+        // Clear the selected pond visually
+        setPlayerCounts((prev) => {
             const temp = [...prev];
-            temp[index] = 0;
+            temp[selectedIndex] = 0;
             return temp;
         });
         
-        // Start animated movement
-        await animatedMoveFish(index + 1, fishToMove, lastSourceIndex);
-        
-        // Update opponent state at the end
-        setOpponentCounts([...opCountsRef.current]);
-        setTurnCounter(prev => prev + 1);
-        setIsAnimating(false);
-    }
-
-    async function animatedMoveFish(startIndex: number, fishCount: number, initialSourceIndex: number): Promise<void> {
-        console.log("Animated move fish starting at index:", startIndex, "with", fishCount, "fish");
-        let currentIndex = startIndex;
-        // FishCount is the value of the selected pond
-        let remainingFish = fishCount;
-        let lastSourceIndex = initialSourceIndex;
-        
         while (remainingFish > 0) {
-            const len = counts.length;
+            const len = 6; // Always 6 ponds
             
-            // Move fish in your ponds
+            // Move fish in player's own ponds
             while (remainingFish > 0 && currentIndex < len) {
-                await increaseIndexAnimated(lastSourceIndex, currentIndex, remainingFish);
+                await increaseIndexAnimatedGeneric(
+                    lastSourceIndex,
+                    currentIndex,
+                    remainingFish,
+                    playerPondRefs,
+                    setPlayerHighlighted,
+                    setPlayerCounts
+                );
                 remainingFish--;
-
                 lastSourceIndex = currentIndex;
                 currentIndex++;
                 
                 if (remainingFish === 0) return;
             }
             
-            // Hit the edge - add to score
+            // Hit the edge - add to player's large pond
             if (currentIndex >= len) {
-                console.log("Hit the edge of the array");
-                // Animate to the right large pond (score pond) first
-                if (lastSourceIndex >= 0) {
-                    const fromEl = yourPondRefs.current[lastSourceIndex];
-                    const toEl = rightLargeRef.current;
-                    triggerAnimate(fromEl ?? null, toEl ?? null, remainingFish);
-                    // Wait for animation to complete (800ms) before incrementing score
-                    await new Promise(resolve => setTimeout(resolve, 850));
+                console.log("Hit the edge - animating to large pond");
+                
+                // Animate to player's large pond
+                const fromEl = playerPondRefs.current[lastSourceIndex];
+                const toEl = playerLargePond.current;
+                triggerAnimate(fromEl ?? null, toEl ?? null, remainingFish);
+                await new Promise(resolve => setTimeout(resolve, 850));
+                
+                // Only update score if animating as your turn
+                if (animateAsYourTurn) {
+                    setYourScore(prev => prev + 1);
                 }
                 
-                setYourScore(prev => prev + 1);
-                console.log("score increased");
                 remainingFish--;
-
                 
                 if (remainingFish > 0) {
                     console.log("Moving to opponent ponds with", remainingFish, "fish remaining");
-                    // Now animate from right large pond to opponent ponds
-                    // Use rightLargeRef as the source for the first opponent pond animation
-                    const fromRightLarge = rightLargeRef.current;
-                    remainingFish = await animatedIncreaseOpponentsPonds(remainingFish, -1, fromRightLarge);
-
-                    currentIndex = 0; // Reset to start of your ponds
+                    
+                    // Animate to opponent's ponds (reversed order in Mancala)
+                    remainingFish = await animatedIncreaseOpponentsPondsGeneric(
+                        remainingFish,
+                        playerLargePond.current,
+                        opponentPlayerPondRefs,
+                        setOpponentPlayerHighlighted,
+                        opCountsRef
+                    );
+                    
+                    // Update visual opponent state
+                    setOpponentPlayerCounts([...opCountsRef.current]);
+                    
+                    currentIndex = 0;
                     lastSourceIndex = -1;
                 }
             }
         }
     }
 
-    async function increaseIndexAnimated(prevIndex: number, index: number, currentFishRemaining: number): Promise<void> {
+    async function increaseIndexAnimatedGeneric(
+        prevIndex: number,
+        index: number,
+        currentFishRemaining: number,
+        pondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
+        setHighlighted: (index: number | null) => void,
+        setCounts: React.Dispatch<React.SetStateAction<number[]>>
+    ): Promise<void> {
         return new Promise((resolve) => {
-            // Before highlighting, trigger path animation from prev to current
-            const fromEl = (prevIndex >= 0) ? yourPondRefs.current[prevIndex] : null;
-            const toEl = (index >= 0) ? yourPondRefs.current[index] : null;
+            const fromEl = (prevIndex >= 0) ? pondRefs.current[prevIndex] : null;
+            const toEl = (index >= 0) ? pondRefs.current[index] : null;
             triggerAnimate(fromEl ?? null, toEl ?? null, currentFishRemaining);
 
-            // Highlight the pond when fish starts moving
-            setYourHighlighted(index);
+            setHighlighted(index);
 
-            // Wait for animation to complete (800ms) before updating state
             setTimeout(() => {
                 setCounts(prev => {
                     const newCounts = [...prev];
@@ -285,67 +467,55 @@ export default function Game() {
                     return newCounts;
                 });
 
-                // Remove highlight after state update
                 setTimeout(() => {
-                    setYourHighlighted(null);
+                    setHighlighted(null);
                     resolve();
-                }, 200); // Brief time to show the updated count
-            }, 850); // Wait for fish animation to finish
+                }, 200);
+            }, 850);
         });
     }
 
-    async function animatedIncreaseOpponentsPonds(fishCount: number, lastSourceIndex: number, overrideFromEl?: HTMLElement | SVGElement | null): Promise<number> {
-        console.log("Animated opponent ponds with", fishCount, "fish");
+    async function animatedIncreaseOpponentsPondsGeneric(
+        fishCount: number,
+        fromEl: HTMLElement | SVGElement | null,
+        opponentPondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
+        setOpponentHighlighted: (index: number | null) => void,
+        opCountsRef: React.MutableRefObject<number[]>
+    ): Promise<number> {
+        console.log("Animating opponent ponds with", fishCount, "fish");
         const temp = [...opCountsRef.current].reverse();
         const len = temp.length;
         let remainingFish = fishCount;
         
         for (let i = 0; i < fishCount && i < len; i++) {
-            const originalIndex = len - 1 - i; // map reversed index back to opponent UI index
+            const originalIndex = len - 1 - i;
 
-            // Highlight the opponent pond that will receive a fish
-            setOpHighlighted(originalIndex);
+            setOpponentHighlighted(originalIndex);
 
-            // Determine the source element for animation
-            let fromEl: HTMLElement | SVGElement | null = null;
-            if (i === 0 && overrideFromEl) {
-                // For the first iteration, use the override (e.g., rightLargePond)
-                fromEl = overrideFromEl;
-            } else if (i > 0) {
-                // For subsequent iterations, use the previous opponent pond
-                const prevOpponentIndex = len - i;
-                fromEl = opponentPondRefs.current[prevOpponentIndex] ?? null;
-            } else if (lastSourceIndex >= 0) {
-                // Fallback to the original source from your ponds
-                fromEl = yourPondRefs.current[lastSourceIndex];
+            let sourceEl: HTMLElement | SVGElement | null = null;
+            if (i === 0) {
+                sourceEl = fromEl;
             } else {
-                // Final fallback to left large pond
-                fromEl = leftLargeRef.current;
+                const prevOpponentIndex = len - i;
+                sourceEl = opponentPondRefs.current[prevOpponentIndex] ?? null;
             }
 
             const toEl = opponentPondRefs.current[originalIndex];
-            triggerAnimate(fromEl ?? null, toEl ?? null, remainingFish);
+            triggerAnimate(sourceEl ?? null, toEl ?? null, remainingFish);
 
-            // Wait for animation to complete (800ms) before updating state
             await new Promise(resolve => setTimeout(resolve, 850));
 
             temp[i] += 1;
             remainingFish--;
 
-
-            // Update the visual state (reverse back to original order)
             opCountsRef.current = [...temp].reverse();
-            setOpponentCounts([...opCountsRef.current]);
 
-            // Keep the highlight visible briefly after increment
             await new Promise(resolve => setTimeout(resolve, 200));
-            setOpHighlighted(null);
+            setOpponentHighlighted(null);
         }
         
-        // Update the ref with final state
         opCountsRef.current = temp.reverse();
-        
-        return remainingFish; // Return any fish that didn't fit
+        return remainingFish;
     }
 
     const baseSize = 40;
@@ -406,6 +576,7 @@ export default function Game() {
                 </motion.div>
             </div>
         )}
+        <LoadingModal isLoading={loading} />
 
         </div>
     );

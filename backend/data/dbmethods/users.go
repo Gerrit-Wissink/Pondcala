@@ -107,6 +107,15 @@ func GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
+func GetAllUsersOnline() ([]models.User, error) {
+	var users []models.User
+	result := db.DB.Where("is_online = ?", true).Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
+}
+
 // UpdateUser updates an existing user's information
 func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
 	var user models.User
@@ -124,6 +133,56 @@ func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
+	var userStats models.UserStats
+
+	// First, check if user stats exist
+	result := db.DB.Where("user_id = ?", id).First(&userStats)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user stats: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user with id %d not found", id)
+	}
+
+	//Check if high score needs to be updated
+	if score > userStats.HighScore {
+		userStats.HighScore = score
+	}
+
+	//If found, update numWins, numLossess, and gamesPlayed
+	if result.Error == nil {
+		userStats.NumWins += winsDelta
+		userStats.NumLoss += lossesDelta
+		userStats.GamesPlayed += winsDelta + lossesDelta
+	}
+
+	result = db.DB.Save(&userStats)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user stats: %w", result.Error)
+	}
+	return nil
+}
+
+func GetUserStats(id uint) (*models.UserStats, error) {
+	var userStats models.UserStats
+
+	// First, check if user stats exist
+	result := db.DB.Where("user_id = ?", id).First(&userStats)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get user stats: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("user stats for user id %d not found", id)
+	}
+
+	return &userStats, nil
 }
 
 // UpdateUserStruct updates a user using a struct (zero values are ignored)

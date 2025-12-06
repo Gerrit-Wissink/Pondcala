@@ -33,8 +33,7 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 		SelectedIndex int   `json:"selected_index"`
 		HostPonds     []int `json:"host_ponds,omitempty"`
 		OpponentPonds []int `json:"opponent_ponds,omitempty"`
-		HostScore     int   `json:"host_score,omitempty"`
-		OpponentScore int   `json:"opponent_score,omitempty"`
+		UserScore     int   `json:"user_score"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid JSON payload: "+err.Error())
@@ -42,7 +41,7 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call business logic
-	gameTurn, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, request.HostPonds, request.OpponentPonds, request.HostScore, request.OpponentScore)
+	gameTurn, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, request.HostPonds, request.OpponentPonds, request.UserScore)
 	if err != nil {
 		// Determine appropriate HTTP status based on error type
 		status := http.StatusInternalServerError
@@ -59,16 +58,25 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch whose turn it is now through the business layer
+	whoseTurn, err := business.FetchWhoseTurnItIs(request.GameID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to determine whose turn it is: "+err.Error())
+		return
+	}
+
 	// Success response using inline struct
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(struct {
-		Success  bool             `json:"success"`
-		Message  string           `json:"message"`
-		GameTurn *models.GameTurn `json:"game_turn,omitempty"`
+		Success   bool             `json:"success"`
+		Message   string           `json:"message"`
+		GameTurn  *models.GameTurn `json:"game_turn,omitempty"`
+		WhoseTurn uint             `json:"whose_turn"`
 	}{
-		Success:  true,
-		Message:  "Turn processed successfully",
-		GameTurn: gameTurn,
+		Success:   true,
+		Message:   "Turn processed successfully",
+		GameTurn:  gameTurn,
+		WhoseTurn: whoseTurn,
 	})
 }
 
@@ -124,5 +132,47 @@ func getGameState(w http.ResponseWriter, r *http.Request) {
 	}{
 		Success:   true,
 		GameState: game,
+	})
+}
+
+func GetAllGamesByUserID(w http.ResponseWriter, r *http.Request) {
+	// Set response headers
+	w.Header().Set("Content-Type", "application/json")
+
+	// Only allow GET method
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed. Use GET")
+		return
+	}
+
+	// Parse query parameters
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		writeError(w, http.StatusBadRequest, "Missing user_id parameter")
+		return
+	}
+
+	// Convert userID to uint
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid user_id parameter: "+err.Error())
+		return
+	}
+
+	// Call business logic to fetch all games for the user
+	games, err := business.FetchAllGamesByUserID(uint(userID))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to fetch games: "+err.Error())
+		return
+	}
+
+	// Success response using inline struct
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(struct {
+		Success bool          `json:"success"`
+		Games   []models.Game `json:"games,omitempty"`
+	}{
+		Success: true,
+		Games:   games,
 	})
 }

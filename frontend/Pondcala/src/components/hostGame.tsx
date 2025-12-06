@@ -1,25 +1,48 @@
 import { useState, useEffect } from "react"
 import apiClient from "../utils/apiClient";
+import { sendMessage } from "../utils/WebSockets";
 import "./toggle.css";
 
-export default function HostGame() {
-    const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
-    const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
+export default function HostGame({inviteStatus}: {inviteStatus: string}) {
+    const [selectedOpponent, setSelectedOpponent] = useState<number | null>(null);
+    const [users, setUsers] = useState<any[]>([]);
     const [allowAnyone, setAllowAnyone] = useState<boolean>(false);
-    const [inviteStatus, setInviteStatus] = useState<string>("");
+
+    useEffect(() => {
+        async function fetchUsers() {
+            try {
+                const response = await apiClient.get("/api/users/online");
+                setUsers(response.data.users || []);
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            }
+        }
+        fetchUsers();
+    }, []);
+
+
+    async function invitePlayer(opponent: number) {
+        console.log(`Inviting opponent with ID ${opponent} to a game...`);
+        
+        const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
+        
+        if (!currentUser || !currentUser.id) {
+            console.error("Current user not found");
+            return;
+        }
+        
+        const inviteMessage = {
+            type: "invite",
+            sender: currentUser.id,
+            recipient: opponent,
+            sentAt: new Date().toISOString(),
+            status: "sent"
+        };
+        
+        sendMessage(inviteMessage);
+    }
     
-    // useEffect(() => {
-    //     // Fetch available players from the server
-    //     apiClient.get('/api/users/usernames')
-    //         .then(response => {
-    //             setAvailablePlayers(response.data.players);
-    //         })
-    //         .catch(error => {
-    //             console.error("Error fetching available players:", error);
-    //         });
-    // }, []);
-
-
+    
     return (
         <div style={{background: '#000000A6', color: "white", padding: "10px", borderRadius: "15px", margin: "5px"}}>
             <h1>Host a Game</h1>
@@ -28,21 +51,20 @@ export default function HostGame() {
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row'}}>
                     <select style={{padding: '5px', borderRadius: '5px'}}>
                         <option value="" disabled selected>Select a player</option>
-                        {availablePlayers.map((player, index) => (
+                        {users.map((player, index) => (
                             <option 
                                 key={index}
-                                value={player}
-                                onClick={() => setSelectedOpponent(player)}
+                                value={player.ID}
+                                onClick={() => setSelectedOpponent(player.ID)}
                             >
-                                {player}
+                                {player.Username}
                             </option>
                         ))}
                     </select>
                     <button
                         onClick={() => {
                             if (selectedOpponent) {
-                                console.log(`Inviting ${selectedOpponent} to a game...`);
-                                // Add invitation logic here
+                                invitePlayer(selectedOpponent);
                             } else {
                                 console.log("No opponent selected.");
                             }

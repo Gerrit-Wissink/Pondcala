@@ -25,6 +25,7 @@ export default function Fish({scale = 1}: {scale?: number}) {
     if (scale === 1) {
         return (
             <>
+                <p style={{background: '#000000A6', color: "white", width: 'fit-content', textAlign: "center"}}>{scale - 1}</p>
                 <svg viewBox="0 -554 2132 2132" className="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000">
                 <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
                 <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
@@ -83,7 +84,7 @@ export default function Fish({scale = 1}: {scale?: number}) {
 
     return (
         <div style={{ width: size, height: size, display: 'inline-block', transformOrigin: 'center' }}>
-            <p style={{background: '#000000A6', color: "white"}}>{scale}</p>
+            {/* <p style={{background: '#000000A6', color: "white", width: size, textAlign: "center", fontSize: '1.5em'}}>{scale - 1}</p> */}
             <svg viewBox="0 -554 2132 2132" className="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000" style={{ width: '100%', height: '100%' }}>
                 <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
                 <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>

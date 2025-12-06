@@ -11,6 +11,7 @@ import (
 	"github.com/Gerrit-Wissink/Pondcala/backend/business"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -36,22 +37,32 @@ type GameChatMessage struct {
 	Time    string `json:"time"`
 	Author  uint   `json:"author"`
 	Players []uint `json:"players"`
+	GameID  uint   `json:"gameID"`
+}
+
+type LobbyInviteMessage struct {
+	Sender    uint   `json:"sender"`
+	Recipient uint   `json:"recipient"`
+	SentAt    string `json:"sentAt"`
+	Status    string `json:"status"` // e.g., "sent", "accepted", "declined", "timeout"
 }
 
 type GameTurnMessage struct {
-	GameID        uint   `json:"gameId"`
+	GameID        uint   `json:"gameID"`
 	TurnTaker     uint   `json:"turnTaker"`
 	SelectedIndex int    `json:"selectedIndex"`
 	HostPools     []int  `json:"hostPools"`
 	OppPools      []int  `json:"opponentPools"`
 	Players       []uint `json:"players"`
+	UserScore     int    `json:"userScore"`
 }
 
 type GameEndMessage struct {
-	Sender  uint   `json:"sender"`
-	Time    string `json:"time"`
-	Players []uint `json:"players"`
-	Reason  string `json:"reason"` // "Win" or "Forfeit"
+	Sender  uint         `json:"sender"`
+	Time    string       `json:"time"`
+	Players []uint       `json:"players"`
+	Reason  string       `json:"reason"` // "Win" or "Forfeit"
+	Scores  map[uint]int `json:"scores"`
 }
 
 // IncomingMessage is a union type that represents the different message
@@ -73,6 +84,10 @@ type IncomingMessage struct {
 	SelectedIndex int   `json:"selectedIndex,omitempty"`
 	HostPools     []int `json:"hostPools,omitempty"`
 	OppPools      []int `json:"opponentPools,omitempty"`
+	UserScore     int   `json:"userScore,omitempty"`
+	HostScore     int   `json:"hostScore,omitempty"`
+	OpponentScore int   `json:"opponentScore,omitempty"`
+	WhoseTurn     uint  `json:"whoseTurn,omitempty"`
 
 	// invitation-specific fields
 	Sender    uint   `json:"sender,omitempty"`
@@ -151,7 +166,13 @@ func (h *ChatHub) Run() {
 		// Remove the client from the hub and close the connection.
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client]; ok {
+			if userID, ok := h.clients[client]; ok {
+				// Set user offline when they disconnect
+				if userID != 0 {
+					if err := business.UpdateUserOnlineStatus(userID, false); err != nil {
+						log.Printf("Error setting user %d offline: %v", userID, err)
+					}
+				}
 				delete(h.clients, client)
 				client.Close()
 			}
@@ -310,6 +331,11 @@ func (h *ChatHub) Run() {
 				}
 				h.mu.RUnlock()
 
+				// Persist lobby message (do DB work outside lock)
+				if _, err := business.SaveGameMessage(inc.GameID, inc.Author, inc.Message); err != nil {
+					log.Printf("Error saving message to database: %v", err)
+				}
+
 				for _, c := range conns {
 					if err := c.WriteJSON(inc); err != nil {
 						log.Printf("Error routing game-msg: %v", err)
@@ -319,7 +345,39 @@ func (h *ChatHub) Run() {
 				}
 
 			case "game-turn":
-				// game-turn: similar routing to game-msg, contains game-specific fields
+				// game-turn: process turn server-side first, then route to players
+
+				// Process the turn through business logic
+				gameTurn, err := business.ProcessTurn(
+					inc.GameID,
+					inc.TurnTaker,
+					inc.SelectedIndex,
+					inc.HostPools,
+					inc.OppPools,
+					inc.UserScore,
+				)
+				if err != nil {
+					log.Printf("Error processing turn via WebSocket: %v", err)
+					// TODO: Send error back to sender
+					continue
+				}
+
+				// Get whose turn it is now
+				whoseTurn, err := business.FetchWhoseTurnItIs(inc.GameID)
+				if err != nil {
+					log.Printf("Error fetching whose turn: %v", err)
+					// Continue anyway, client can fetch this separately
+				} else {
+					inc.WhoseTurn = whoseTurn
+				}
+
+				// Update message with validated turn data
+				inc.HostPools = gameTurn.HostPonds
+				inc.OppPools = gameTurn.OpponentPonds
+				inc.HostScore = gameTurn.HostScore
+				inc.OpponentScore = gameTurn.OpponentScore
+
+				// Route to all players in the game
 				targets := make(map[uint]struct{}, len(inc.Players))
 				for _, id := range inc.Players {
 					targets[id] = struct{}{}
@@ -415,11 +473,21 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 			huid = inc.Author
 		} else if inc.TurnTaker != 0 {
 			huid = inc.TurnTaker
+		} else if inc.Sender != 0 {
+			huid = inc.Sender
 		}
 
 		if huid != 0 {
 			Hub.mu.Lock()
-			Hub.clients[conn] = huid
+			// Check if this is a new user association (not already set)
+			currentUID := Hub.clients[conn]
+			if currentUID != huid {
+				Hub.clients[conn] = huid
+				// Set user online when they first send a message with their ID
+				if err := business.UpdateUserOnlineStatus(huid, true); err != nil {
+					log.Printf("Error setting user %d online: %v", huid, err)
+				}
+			}
 			Hub.mu.Unlock()
 		}
 

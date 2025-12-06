@@ -80,6 +80,43 @@ func FetchWhoseTurnItIs(gameID uint) (uint, error) {
 		return 0, fmt.Errorf("failed to fetch game: %w", result.Error)
 	}
 
+	// Check if the last turn ended in the player's large pond (they get another turn)
+	isHost := lastTurn.TurnTaker == game.HostID
+
+	// Determine if the last move ended in the large pond
+	// In Mancala, after distributing stones, if the last stone lands in your large pond,
+	// you get another turn. We need to check if the score increased in the last turn.
+
+	// To determine if they landed in their large pond, we need to check the previous turn
+	var previousTurn models.GameTurn
+	prevResult := db.DB.Where("game_id = ?", gameID).
+		Where("timestamp < ?", lastTurn.Timestamp).
+		Order("timestamp desc").
+		First(&previousTurn)
+
+	landedInLargePond := false
+	if prevResult.Error == nil {
+		// Compare scores to see if the player's score increased
+		if isHost {
+			landedInLargePond = lastTurn.HostScore > previousTurn.HostScore
+		} else {
+			landedInLargePond = lastTurn.OpponentScore > previousTurn.OpponentScore
+		}
+	} else {
+		// This is the first turn, check if score increased from 0
+		if isHost {
+			landedInLargePond = lastTurn.HostScore > 0
+		} else {
+			landedInLargePond = lastTurn.OpponentScore > 0
+		}
+	}
+
+	// If they landed in their large pond, they go again
+	if landedInLargePond {
+		return lastTurn.TurnTaker, nil
+	}
+
+	// Otherwise, it's the other player's turn
 	if lastTurn.TurnTaker == game.HostID {
 		return game.OpponentID, nil
 	} else {
