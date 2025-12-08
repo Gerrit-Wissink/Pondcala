@@ -5,13 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	// "strconv"
+	"strings"
 )
-
-// type ErrorResponse struct {
-// 	Success   bool   `json:"success"`
-// 	Error     string `json:"error,omitempty"`
-// }
 
 // writeError writes an error response with optional error details
 func writeError(w http.ResponseWriter, status int, errorMessage string) {
@@ -31,4 +26,16 @@ func generateToken() (string, error) {
 	token := base64.RawURLEncoding.EncodeToString(b)
 
 	return token, nil
+}
+
+func sanitizeMessage(input string) string {
+	// Implement basic sanitization to prevent XSS attacks
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		"\"", "&quot;",
+		"'", "&#39;",
+	)
+	return replacer.Replace(input)
 }

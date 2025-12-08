@@ -1,11 +1,11 @@
-package services
+package dbmethods
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods/db"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/services/db"
 )
 
 func Login(username string, hashedPassword string) (*models.User, error) {
@@ -33,12 +33,26 @@ func CreateSession(tokenHash string, userID uint, expiresAt time.Time) (*models.
 	return session, nil
 }
 
+func VerifySession(tokenHash string) (*models.Session, error) {
+	var session models.Session
+	result := db.DB.Where("TokenHash = ?", tokenHash).First(&session)
+	if result.Error != nil || result.RowsAffected == 0 {
+		return nil, fmt.Errorf("failed to verify session: %w", result.Error)
+	}
+
+	// Check if the session has expired
+	if time.Now().After(session.ExpiresAt) {
+		return nil, fmt.Errorf("session has expired")
+	}
+
+	return &session, nil
+}
+
 // CreateUser creates a new user in the database
-func CreateUser(username, hashedPassword, email string) (*models.User, error) {
+func CreateUser(username, hashedPassword string) (*models.User, error) {
 	user := &models.User{
 		Username: username,
-		HashedPw: hashedPassword,
-		Email:    email,
+		Password: hashedPassword,
 		IsOnline: false,
 	}
 
@@ -59,6 +73,49 @@ func GetUser(id uint) (*models.User, error) {
 	return &user, nil
 }
 
+func GetUserByUsername(username string) (*models.User, error) {
+	var user models.User
+	result := db.DB.Where("username = ?", username).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func GetUserByTokenHash(tokenHash string) (*models.User, error) {
+	var session models.Session
+	result := db.DB.Where("token_hash = ?", tokenHash).First(&session)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to find session: %w", result.Error)
+	}
+
+	var user models.User
+	result = db.DB.First(&user, session.UserID)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to find user: %w", result.Error)
+	}
+
+	return &user, nil
+}
+
+func GetAllUsers() ([]models.User, error) {
+	var users []models.User
+	result := db.DB.Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
+}
+
+func GetAllUsersOnline() ([]models.User, error) {
+	var users []models.User
+	result := db.DB.Where("is_online = ?", true).Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
+}
+
 // UpdateUser updates an existing user's information
 func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
 	var user models.User
@@ -76,6 +133,56 @@ func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
+	var userStats models.UserStats
+
+	// First, check if user stats exist
+	result := db.DB.Where("user_id = ?", id).First(&userStats)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user stats: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user with id %d not found", id)
+	}
+
+	//Check if high score needs to be updated
+	if score > userStats.HighScore {
+		userStats.HighScore = score
+	}
+
+	//If found, update numWins, numLossess, and gamesPlayed
+	if result.Error == nil {
+		userStats.NumWins += winsDelta
+		userStats.NumLoss += lossesDelta
+		userStats.GamesPlayed += winsDelta + lossesDelta
+	}
+
+	result = db.DB.Save(&userStats)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user stats: %w", result.Error)
+	}
+	return nil
+}
+
+func GetUserStats(id uint) (*models.UserStats, error) {
+	var userStats models.UserStats
+
+	// First, check if user stats exist
+	result := db.DB.Where("user_id = ?", id).First(&userStats)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get user stats: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("user stats for user id %d not found", id)
+	}
+
+	return &userStats, nil
 }
 
 // UpdateUserStruct updates a user using a struct (zero values are ignored)

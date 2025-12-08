@@ -2,14 +2,12 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Session struct {
-	gorm.Model
+	ID        uint      `gorm:"primaryKey"`
 	TokenHash string    `gorm:"uniqueIndex;size:64"`
-	UserID    uint      `gorm: "index"`
+	UserID    uint      `gorm:"index"`
 	ExpiresAt time.Time `gorm:"index"`
 	CreatedAt time.Time
 }

@@ -1,4 +1,8 @@
-let LargePond = ({score}: {score: number | null}) => {
+import { forwardRef } from "react";
+
+type LargePondProps = { score: number | null };
+
+const LargePond = forwardRef<SVGEllipseElement, LargePondProps>(({ score }, ref) => {
 
     const largePondStyle = {
         fill: 'steelblue',
@@ -18,12 +22,13 @@ let LargePond = ({score}: {score: number | null}) => {
                     rx='150'
                     ry='300'
 
+                    ref={ref}
                     style={largePondStyle}
                 />
             </svg>
             <h1 style={{color: 'white'}}>{score ?? ''}</h1>
-        </div>
+    </div>
     );
-}
+});
 
 export default LargePond;
