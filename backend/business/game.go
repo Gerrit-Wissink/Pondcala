@@ -2,6 +2,7 @@ package business
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
 	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
@@ -88,7 +89,17 @@ func FetchGameStateByID(gameID uint) (interface{}, error) {
 		return nil, err
 	}
 
+	turnNumber, err := dbmethods.GetCurrentTurnNumber(gameID)
+	if err != nil {
+		return nil, err
+	}
+
 	host, opponent, err := dbmethods.GetPlayers(gameID)
+	if err != nil {
+		return nil, err
+	}
+
+	winner, err := dbmethods.GetWinner(gameID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +113,8 @@ func FetchGameStateByID(gameID uint) (interface{}, error) {
 		HostScore     int
 		OpponentScore int
 		LastTwoTurns  []models.GameTurn
+		TurnNumber    int
+		Winner        *uint
 	}{
 		WhoseTurn:     whoseTurn,
 		Host:          host,
@@ -111,6 +124,8 @@ func FetchGameStateByID(gameID uint) (interface{}, error) {
 		HostScore:     hostScore,
 		OpponentScore: opponentScore,
 		LastTwoTurns:  turns,
+		TurnNumber:    turnNumber,
+		Winner:        winner,
 	}, nil
 }
 
@@ -119,9 +134,32 @@ func FetchAllGamesByUserID(userID uint) ([]models.Game, error) {
 	return dbmethods.GetAllGamesByUserID(userID)
 }
 
-func HandleGameEnd(gameID, userID, opponentID uint, reason string, scores map[uint]int) error {
+func HandleGameEnd(gameID, userID, opponentID uint, reason string) error {
 	// Placeholder for future implementation
-	if reason == "forfeit" {
+
+	game, err := dbmethods.FetchGameByID(gameID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch game: %w", err)
+	}
+
+	// Determine if user is host or opponent
+	isHost := userID == game.HostID
+
+	scores := map[uint]int{}
+	hostScore, opponentScore, err := DetermineEndOfGameScores(gameID)
+	if err != nil {
+		return err
+	}
+
+	if isHost {
+		scores[userID] = hostScore
+		scores[opponentID] = opponentScore
+	} else {
+		scores[userID] = opponentScore
+		scores[opponentID] = hostScore
+	}
+
+	if strings.ToLower(reason) == "forfeit" {
 		// Handle forfeit logic
 		err := dbmethods.DeclareWinner(gameID, opponentID)
 		if err != nil {
@@ -142,7 +180,7 @@ func HandleGameEnd(gameID, userID, opponentID uint, reason string, scores map[ui
 		}
 		return nil
 	}
-	if reason == "win" {
+	if strings.ToLower(reason) == "win" {
 		// Handle win logic
 		err := dbmethods.DeclareWinner(gameID, userID)
 		if err != nil {
@@ -164,4 +202,21 @@ func HandleGameEnd(gameID, userID, opponentID uint, reason string, scores map[ui
 		return nil
 	}
 	return fmt.Errorf("invalid reason for game end")
+}
+
+func CreateGame(hostID, opponentID uint) (*models.Game, *models.GameTurn, error) {
+	gameResult, err := dbmethods.CreateGame(hostID, opponentID)
+	if err != nil {
+		return nil, nil, err
+	}
+	firstTurn, err := dbmethods.CreateInitialGameTurn(gameResult.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return gameResult, firstTurn, nil
+}
+
+func FetchGameByID(gameID uint) (*models.Game, error) {
+	return dbmethods.FetchGameByID(gameID)
 }

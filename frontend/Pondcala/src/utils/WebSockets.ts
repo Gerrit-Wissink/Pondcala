@@ -72,9 +72,14 @@ function handleMessage(message: any): void {
             break;
 
         case 'game-end':
-            // game end notification (Win or Forfeit)
-            // message contains: sender, time, players, reason ("Win" or "Forfeit")
+            // game end notification
             window.dispatchEvent(new CustomEvent('game-end', { detail: message }));
+            break;
+
+        case 'game-created':
+            // game created notification
+            // message contains: gameId, players, time
+            window.dispatchEvent(new CustomEvent('game-created', { detail: message }));
             break;
 
         case 'invite':

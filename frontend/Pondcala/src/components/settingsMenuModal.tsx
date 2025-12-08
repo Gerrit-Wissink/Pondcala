@@ -2,7 +2,7 @@ import { useState } from "react";
 import { deleteCookie } from "../utils/apiClient";
 import UserStatsModal from "./userStatsModal";
 
-export default function SettingsMenuModal({open, setOpen, playing}: {open: boolean, setOpen: (open: boolean) => void, playing: boolean}) {
+export default function SettingsMenuModal({open, setOpen, playing, handleForfeit}: {open: boolean, setOpen: (open: boolean) => void, playing: boolean, handleForfeit: () => void | null}) {
 
     const [statsOpen, setStatsOpen] = useState(false);
 
@@ -35,6 +35,7 @@ export default function SettingsMenuModal({open, setOpen, playing}: {open: boole
                 <button onClick={() => {
                     console.log("Logging out...");
                     // Add logout logic here
+                    Logout();
                 }}>
                     Logout
                 </button>
@@ -43,7 +44,7 @@ export default function SettingsMenuModal({open, setOpen, playing}: {open: boole
                     User Stats
                 </button>
                 {/* Forfeit Button if on game screen*/}
-                {playing && <button onClick={() => {
+                {playing && handleForfeit  !== null && <button onClick={() => {
                     console.log("Forfeiting game...");
                     // Add forfeit logic here
                 }}>
@@ -53,6 +54,7 @@ export default function SettingsMenuModal({open, setOpen, playing}: {open: boole
                 {playing && <button onClick={() => {
                     console.log("Returning to main menu...");
                     // Add return to menu logic here
+                    window.location.href = "/";
                 }}>
                     Back to Main Menu
                 </button>}

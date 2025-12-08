@@ -1,21 +1,21 @@
 
-export default function GameOverModal({}: {}) {
-
+export default function GameOverModal({gameStats, isModalOpen, handleRematch, handleBackToLobby, youWon, setIsEndingModalOpen}: { gameStats: any; isModalOpen: boolean; handleRematch: () => void; handleBackToLobby: () => void; youWon: boolean; setIsEndingModalOpen: React.Dispatch<React.SetStateAction<boolean>> }) {
+    
     function closeModal() {
-        // Logic to close the modal
+        setIsEndingModalOpen(false);
     }
 
     return (
         <div style = {
-            {position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 0 10px rgba(0,0,0,0.5)'}
+            {position: 'fixed', display: isModalOpen ? 'block' : 'none', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 0 10px rgba(0,0,0,0.5)'}
         }>
-            <h2>Game Over</h2>
-            <p>Your Score: 0</p>
-            <p>Opponent Score: 0</p>
-            <p>Number of Turns: 0</p>
+            <h2 style={{color: youWon ? "green" : "red"}}>{youWon ? "You Won!" : "You Lost"}</h2>
+            <p>Your Score: {gameStats.yourScore}</p>
+            <p>Opponent Score: {gameStats.opponentScore}</p>
+            <p>Number of Turns: {gameStats.turns}</p>
             <div style={{display: 'flex', justifyContent: 'space-around', marginTop: '20px'}}>
-                <button>Rematch</button>
-                <button>Exit to Main Menu</button>
+                <button onClick={handleRematch}>Rematch</button>
+                <button onClick={handleBackToLobby}>Exit to Main Menu</button>
                 <button onClick={closeModal}>View Board</button>
             </div>
         </div>

@@ -6,13 +6,13 @@ export default function YourPondRow({
     highlightedIndex,
     yourPondRefs,
     onPondClick,
-    isAnimating
+    disabled
 }: {
     counts: number[];
     highlightedIndex: number | null;
     yourPondRefs: React.MutableRefObject<Array<SVGEllipseElement | null>>;
     onPondClick: (index: number) => void;
-    isAnimating: boolean;
+    disabled: boolean;
 }) {
     return (
         <>
@@ -22,7 +22,7 @@ export default function YourPondRow({
                         <SmallPond 
                             ref={el => { yourPondRefs.current[index] = el; }}
                             onClick={() => {
-                                if (!isAnimating) {
+                                if (!disabled) {
                                     onPondClick(index);
                                 }
                             }} 

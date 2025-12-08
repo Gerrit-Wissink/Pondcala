@@ -8,6 +8,8 @@ import Chat from "../components/Chat";
 import LoadingModal from "../components/loadingModal";
 import apiClient, { getCookie } from "../utils/apiClient";
 import { sendMessage, connectWebSocket, getWebSocket } from "../utils/WebSockets";
+import GameOverModal from "../components/gameOverModal";
+import SettingsMenuModal from "../components/settingsMenuModal";
 
 export default function Game() {
     const [counts, setCounts] = useState(Array(6).fill(4));
@@ -15,6 +17,7 @@ export default function Game() {
     const [opHighlighted, setOpHighlighted] = useState<number | null>(null);
     const [yourHighlighted, setYourHighlighted] = useState<number | null>(null);
     const [yourScore, setYourScore] = useState(0);
+    const [displayedScore, setDisplayedScore] = useState(0); // Animated score display
     const [turnCounter, setTurnCounter] = useState(1);
     const [fishSize, setFishSize] = useState(1);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -26,7 +29,12 @@ export default function Game() {
     const [turnTaker, setTurnTaker] = useState<string | null>(null);
     const [isHost, setIsHost] = useState<boolean>(false);
     const [players, setPlayers] = useState<number[]>([]);
+    const [winner, setWinner] = useState<number | null>(null);
+
     const [loading, setLoading] = useState<boolean>(false);
+    const [isEndingModalOpen, setIsEndingModalOpen] = useState<boolean>(false);
+    const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState<boolean>(false);
+
     const loadingTimeoutRef = useRef<number | null>(null);
 
     const yourPondRefs = useRef<Array<SVGEllipseElement | null>>([]);
@@ -40,6 +48,14 @@ export default function Game() {
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
     
     const whiteOnBlack = {background: '#000000A6', color: "white", padding: "10px", borderRadius: "15px", margin: "5px"};
+
+    // Sync displayedScore with yourScore when score changes from non-animated sources
+    useEffect(() => {
+        // Only update displayedScore if it's significantly different (not during animation)
+        if (Math.abs(displayedScore - yourScore) <= 1) {
+            setDisplayedScore(yourScore);
+        }
+    }, [yourScore, displayedScore]);
 
     useEffect(() => {
         document.title = "Pondcala Game";
@@ -81,7 +97,7 @@ export default function Game() {
         if (!currentUser || !currentUser.id) {
             fetchUserByToken();
         }
-    }, []);
+    }, []); //Fetch currentUser useEffect
 
     useEffect(() => {
          async function fetchGameState() {
@@ -98,16 +114,57 @@ export default function Game() {
                 const isHostPlayer = currentUser.id === gameState.Host.id;
                 setIsHost(isHostPlayer);
                 setPlayers([gameState.Host.id, gameState.Opponent.id]);
-                setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
-                setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
-                setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
-                setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
+                setWinner(gameState.Winner);
+                
+                // If game has already ended, show the modal
+                if (gameState.Winner !== null && gameState.Winner !== undefined) {
+                    setIsEndingModalOpen(true);
+                }
+                
+                // Check if we need to animate the last turn
+                if (gameState.LastTwoTurns && gameState.LastTwoTurns.length > 1) {
+                    // Set the board state to the previous turn (before the last turn)
+                    const prevTurn = gameState.LastTwoTurns[0];
+                    setCounts(isHostPlayer ? prevTurn.host_ponds : prevTurn.opponent_ponds);
+                    setOpponentCounts(isHostPlayer ? prevTurn.opponent_ponds : prevTurn.host_ponds);
+                    setYourScore(isHostPlayer ? prevTurn.host_score : prevTurn.opponent_score);
+                    setTurnTaker(prevTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                    setTurnCounter(gameState.TurnNumber - 1)
+
+                    // Get the last turn to animate
+                    const lastTurn = gameState.LastTwoTurns[gameState.LastTwoTurns.length - 1];
+                    
+                    // Wait a brief moment for the UI to render the previous state
+                    setTimeout(async () => {
+                        // Determine if the turn taker was the current user
+                        const isTurnTaker = lastTurn.turn_taker === currentUser.id;
+                        
+                        // Animate the last turn
+                        setIsAnimating(true);
+                        await animateTurn(lastTurn, isTurnTaker);
+                        setIsAnimating(false);
+                        
+                        // Set the final board state
+                        setCounts(isHostPlayer ? lastTurn.host_ponds : lastTurn.opponent_ponds);
+                        setOpponentCounts(isHostPlayer ? lastTurn.opponent_ponds : lastTurn.host_ponds);
+                        setYourScore(isHostPlayer ? lastTurn.host_score : lastTurn.opponent_score);
+                        setTurnTaker(lastTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                        setTurnCounter(gameState.TurnNumber);
+                    }, 100);
+                } else {
+                    // No animation needed, just set the current state
+                    setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
+                    setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
+                    setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
+                    setTurnTaker(gameState.LastTwoTurns[gameState.LastTwoTurns.length - 1].turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                    setTurnCounter(gameState.TurnNumber);
+                }
             }catch (error) {
                 console.error("Error fetching game state:", error);
             }
         }
         fetchGameState();
-    }, []);
+    }, []); //Fetch gameState useEffect
     
     
     // Keep ref in sync with state
@@ -147,14 +204,14 @@ export default function Game() {
             
             // Update whose turn it is
             if (turnData.whoseTurn) {
-                fetchGameStateForTurn(turnData.whoseTurn);
+                fetchGameStateForTurn();
             }
             
             setTurnCounter(prev => prev + 1);
             setIsAnimating(false);
         };
 
-        const fetchGameStateForTurn = async (whoseTurnId: number) => {
+        const fetchGameStateForTurn = async () => {
             try {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;
@@ -169,7 +226,36 @@ export default function Game() {
         return () => {
             window.removeEventListener('game-turn', handleGameTurn as any);
         };
-    }, [gameID, isHost, currentUser]);
+    }, [gameID, isHost, currentUser]); //Listen for game-turn WebSocket messages
+
+    // Listen for game-end WebSocket messages
+    useEffect(() => {
+        const handleGameEnd = (event: CustomEvent) => {
+            const endData = event.detail;
+            console.log("Received game-end message:", endData);
+            
+            // Update final scores
+            if (isHost) {
+                setYourScore(endData.hostScore || 0);
+            } else {
+                setYourScore(endData.opponentScore || 0);
+            }
+            
+            // Clear all ponds
+            setCounts(Array(6).fill(0));
+            setOpponentCounts(Array(6).fill(0));
+            
+            // Set winner and show modal
+            setWinner(endData.winner);
+            setIsEndingModalOpen(true);
+        };
+
+        window.addEventListener('game-end', handleGameEnd as any);
+        
+        return () => {
+            window.removeEventListener('game-end', handleGameEnd as any);
+        };
+    }, [isHost]); //Listen for game-end WebSocket messages
 
     useEffect(() => {
         return () => {
@@ -183,27 +269,15 @@ export default function Game() {
         }
     }, []);
 
-    useEffect(() => {
-        if(counts.length === 0 || opponentCounts.length === 0) return;
-        const yourPondsTotal = counts.reduce((a,b) => a + b, 0);
-        const opponentPondsTotal = opponentCounts.reduce((a,b) => a + b, 0);
-        if (yourPondsTotal === 0 || opponentPondsTotal === 0) {
-            alert("Game Over! Final Score: " + yourScore);
-            // Reset game state
-            // setCounts(Array(6).fill(4));
-            // setOpponentCounts(Array(6).fill(4));
-            // setYourScore(0);
-            // setTurnCounter(1);
-        }
-    }, [turnCounter]);
+    function handleRematch() {
+        // Placeholder for rematch logic
+        // Could involve sending a WebSocket message to the server to create a new game with the same players
+        console.log("Rematch requested");
+        window.location.href = `/`; // Redirect to lobby for now
+    }
 
-
-
-    
-    function handleEndOfGame() {
-        // Placeholder for end-of-game logic
-        //Need to clear out remaining fish and update scores
-        //Then send websocket message to server about game end
+    function handleBackToLobby() {
+        window.location.href = `/`;
     }
 
     async function SendTurn(index: number) {
@@ -308,6 +382,47 @@ export default function Game() {
         return pts;
     }
 
+    // Animate score increase with easing
+    async function animateScoreIncrease(targetScore: number): Promise<void> {
+        const startScore = yourScore;
+        const difference = targetScore - startScore;
+        
+        if (difference <= 0) {
+            setDisplayedScore(targetScore);
+            return;
+        }
+        
+        const duration = 800; // Total animation duration in ms
+        const startTime = Date.now();
+        
+        // Easing function (ease-in-out cubic)
+        const easeInOutCubic = (t: number): number => {
+            return t < 0.5
+                ? 4 * t * t * t
+                : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        };
+        
+        return new Promise((resolve) => {
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = easeInOutCubic(progress);
+                
+                const currentScore = Math.round(startScore + difference * easedProgress);
+                setDisplayedScore(currentScore);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    setDisplayedScore(targetScore);
+                    resolve();
+                }
+            };
+            
+            requestAnimationFrame(animate);
+        });
+    }
+
     // Handle pond click - initiate turn (no animation, server will send back validated turn)
     async function handlePondClick(index: number) {
         if (isAnimating) return; // Prevent multiple animations at once
@@ -330,7 +445,8 @@ export default function Game() {
     async function animateTurn(turnData: any, isTurnTaker: boolean): Promise<void> {
         console.log("Animating turn:", turnData, "isTurnTaker:", isTurnTaker);
         
-        const selectedIndex = turnData.selectedIndex;
+        // Handle both snake_case (from database) and camelCase (from WebSocket)
+        const selectedIndex = turnData.selectedIndex ?? turnData.selected_index;
         
         // Determine the before/after states to figure out fish movement
         // We need to simulate the turn to know the animation path
@@ -369,6 +485,8 @@ export default function Game() {
         let currentIndex = selectedIndex + 1;
         let remainingFish = fishCount;
         let lastSourceIndex = selectedIndex;
+        let lastPondIndex = -1;
+        let lastPondWasPlayerSide = false;
         
         // Get references based on whose turn we're animating
         const playerPondRefs = animateAsYourTurn ? yourPondRefs : opponentPondRefs;
@@ -401,13 +519,15 @@ export default function Game() {
                 );
                 remainingFish--;
                 lastSourceIndex = currentIndex;
+                lastPondIndex = currentIndex;
+                lastPondWasPlayerSide = true;
                 currentIndex++;
                 
-                if (remainingFish === 0) return;
+                if (remainingFish === 0) break;
             }
             
             // Hit the edge - add to player's large pond
-            if (currentIndex >= len) {
+            if (currentIndex >= len && remainingFish > 0) {
                 console.log("Hit the edge - animating to large pond");
                 
                 // Animate to player's large pond
@@ -422,18 +542,24 @@ export default function Game() {
                 }
                 
                 remainingFish--;
+                lastPondIndex = -1; // Large pond
+                lastPondWasPlayerSide = false;
                 
                 if (remainingFish > 0) {
                     console.log("Moving to opponent ponds with", remainingFish, "fish remaining");
                     
                     // Animate to opponent's ponds (reversed order in Mancala)
-                    remainingFish = await animatedIncreaseOpponentsPondsGeneric(
+                    const result = await animatedIncreaseOpponentsPondsGeneric(
                         remainingFish,
                         playerLargePond.current,
                         opponentPlayerPondRefs,
                         setOpponentPlayerHighlighted,
                         opCountsRef
                     );
+                    
+                    remainingFish = result.remainingFish;
+                    lastPondIndex = result.lastPondIndex;
+                    lastPondWasPlayerSide = false;
                     
                     // Update visual opponent state
                     setOpponentPlayerCounts([...opCountsRef.current]);
@@ -442,6 +568,47 @@ export default function Game() {
                     lastSourceIndex = -1;
                 }
             }
+        }
+        
+        // Capture rule: If the last stone landed in an empty pond on the player's side
+        // (value is now 1) and it's not the large pond, capture that pond and the opposite pond
+        if (lastPondWasPlayerSide && lastPondIndex >= 0 && lastPondIndex < 6) {
+            setPlayerCounts((prevCounts) => {
+                const currentValue = prevCounts[lastPondIndex];
+                if (currentValue === 1) {
+                    const oppositeIndex = 5 - lastPondIndex;
+                    
+                    // Get the current opponent counts
+                    const currentOpponentCounts = animateAsYourTurn ? opCountsRef.current : [...counts];
+                    const oppositePondValue = currentOpponentCounts[oppositeIndex];
+                    
+                    if (oppositePondValue > 0) {
+                        const capturedStones = currentValue + oppositePondValue;
+                        
+                        // Update player's pond to 0
+                        const newPlayerCounts = [...prevCounts];
+                        newPlayerCounts[lastPondIndex] = 0;
+                        
+                        // Update opponent's pond to 0
+                        setOpponentPlayerCounts((prevOpponentCounts) => {
+                            const newOpponentCounts = [...prevOpponentCounts];
+                            newOpponentCounts[oppositeIndex] = 0;
+                            return newOpponentCounts;
+                        });
+                        
+                        // Add captured stones to score (only if animating as your turn)
+                        if (animateAsYourTurn) {
+                            const newScore = yourScore + capturedStones;
+                            setYourScore(newScore);
+                            // Animate score increase for captures
+                            animateScoreIncrease(newScore);
+                        }
+                        
+                        return newPlayerCounts;
+                    }
+                }
+                return prevCounts;
+            });
         }
     }
 
@@ -481,11 +648,12 @@ export default function Game() {
         opponentPondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
         setOpponentHighlighted: (index: number | null) => void,
         opCountsRef: React.MutableRefObject<number[]>
-    ): Promise<number> {
+    ): Promise<{ remainingFish: number; lastPondIndex: number }> {
         console.log("Animating opponent ponds with", fishCount, "fish");
         const temp = [...opCountsRef.current].reverse();
         const len = temp.length;
         let remainingFish = fishCount;
+        let lastPondIndex = -1;
         
         for (let i = 0; i < fishCount && i < len; i++) {
             const originalIndex = len - 1 - i;
@@ -507,6 +675,7 @@ export default function Game() {
 
             temp[i] += 1;
             remainingFish--;
+            lastPondIndex = originalIndex;
 
             opCountsRef.current = [...temp].reverse();
 
@@ -515,7 +684,36 @@ export default function Game() {
         }
         
         opCountsRef.current = temp.reverse();
-        return remainingFish;
+        return { remainingFish, lastPondIndex };
+    }
+
+    function handleForfeit() {
+        // Send forfeit request to server
+        try {
+            const opponentID = players.find(p => p !== currentUser.id);
+            if (!opponentID) {
+                console.error("Could not find opponent ID");
+                return;
+            }
+
+            apiClient.post(`/api/game/end`, {
+                game_id: parseInt(gameID || "0"),
+                user_id: currentUser.id,
+                opponent_id: opponentID,
+                reason: "forfeit",
+            }).then(response => {
+                console.log("Forfeit successful:", response.data);
+                
+                // The server should broadcast a game-end message via WebSocket
+                // which will be handled by the game-end listener
+                // The winner will be the opponent since current user forfeited
+            }).catch(error => {
+                console.error("Error forfeiting game:", error);
+                alert("Failed to forfeit game. Please try again.");
+            });
+        } catch (error) {
+            console.error("Error handling forfeit:", error);
+        }
     }
 
     const baseSize = 40;
@@ -523,10 +721,10 @@ export default function Game() {
     return (
         <div style={{width: "80%"}}>
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row'}}>
-            {/* Use 8-digit hex (#RRGGBBAA) for background alpha so only the background is translucent */}
+            <button onClick={() => setIsSettingsMenuOpen(true)}>Settings</button>
             <div style={whiteOnBlack}>
+                <h2>Current Turn:</h2>
                 <h2>{turnTaker}</h2>
-                <h2>Turn Timer</h2>
             </div>
             <h1 style={whiteOnBlack}>Turn {turnCounter}</h1>
             <button>{/* Menu Icon */}</button>
@@ -540,10 +738,10 @@ export default function Game() {
                 highlightedIndex={yourHighlighted}
                 yourPondRefs={yourPondRefs} 
                 onPondClick={handlePondClick}
-                isAnimating={isAnimating}
+                disabled={isAnimating || winner !== null}
             />
             </div>
-            <LargePond ref={rightLargeRef} score={yourScore} />
+            <LargePond ref={rightLargeRef} score={displayedScore} />
         </div>
         <Chat type="game" />
 
@@ -577,6 +775,20 @@ export default function Game() {
             </div>
         )}
         <LoadingModal isLoading={loading} />
+        <GameOverModal 
+            isModalOpen={isEndingModalOpen} 
+            gameStats={{ yourScore, opponentScore: opponentCounts.reduce((a, b) => a + b, 0), turns: turnCounter }} 
+            handleRematch={handleRematch} 
+            handleBackToLobby={handleBackToLobby} 
+            youWon={winner === currentUser.id} 
+            setIsEndingModalOpen={setIsEndingModalOpen} 
+        />
+        <SettingsMenuModal
+            open={isSettingsMenuOpen}
+            setOpen={setIsSettingsMenuOpen}
+            playing={true}
+            handleForfeit={handleForfeit}
+        />
 
         </div>
     );

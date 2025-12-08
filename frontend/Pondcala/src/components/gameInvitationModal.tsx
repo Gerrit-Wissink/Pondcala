@@ -38,8 +38,10 @@ export default function GameInvitationModal({invite, setInvitations}: {invite: a
         }>
             <h2>Game Invitation</h2>
             <p>{getUsername(typeof invite.sender === "number" ? invite.sender : parseInt(invite.sender))} has invited you to a game!</p>
-            <button onClick={acceptInvitation}>Accept</button>
-            <button onClick={declineInvitation}>Decline</button>
+            <div style={{display: 'flex', justifyContent: 'space-around', marginTop: '20px'}}>
+                <button style={{backgroundColor: 'green', color: 'white'}} onClick={acceptInvitation}>Accept</button>
+                <button style={{backgroundColor: 'red', color: 'white'}} onClick={declineInvitation}>Decline</button>
+            </div>
         </div>
     );
 }

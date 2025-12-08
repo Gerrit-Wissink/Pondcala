@@ -50,10 +50,10 @@ export default function Login() {
         setErrorMessage("");
         event?.preventDefault();
         try{
-            if (username.length < 1) {
+            if (username.trim().length < 1) {
                 throw new Error("Username is required")
             }
-            if (password.length < 1) {
+            if (password.trim().length < 1) {
                 throw new Error("Password is required");
             }
 
@@ -70,6 +70,14 @@ export default function Login() {
 
             let user = response.data.User;
             console.log("User returned from account creation", user);
+            localStorage.setItem("user", JSON.stringify(user));
+
+            if (!user) {
+                throw new Error("Invalid login credentials");
+            }else {
+                // Redirect to lobby or main page
+                window.location.href = "/";
+            }
         }catch (error) {
             console.log(`Error creating account: ${error}`)
             setErrorMessage(`${error}`)

@@ -113,6 +113,24 @@ export default function Lobby() {
         };
     }, [currentUser]);
 
+    useEffect(() => {
+        const handleGameCreated = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const gameData = customEvent.detail;
+            
+            // Redirect to the game page with the gameID
+            if (gameData.gameId) {
+                window.location.href = `/game?gameID=${gameData.gameId}`;
+            }
+        };
+
+        window.addEventListener('game-created', handleGameCreated);
+
+        return () => {
+            window.removeEventListener('game-created', handleGameCreated);
+        };
+    }, []);
+
 
     const lobby = (
         <>

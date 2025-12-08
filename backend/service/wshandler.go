@@ -57,12 +57,10 @@ type GameTurnMessage struct {
 	UserScore     int    `json:"userScore"`
 }
 
-type GameEndMessage struct {
-	Sender  uint         `json:"sender"`
-	Time    string       `json:"time"`
-	Players []uint       `json:"players"`
-	Reason  string       `json:"reason"` // "Win" or "Forfeit"
-	Scores  map[uint]int `json:"scores"`
+type GameCreatedMessage struct {
+	GameID  uint   `json:"gameId"`
+	Players []uint `json:"players"`
+	Time    string `json:"time"`
 }
 
 // IncomingMessage is a union type that represents the different message
@@ -96,6 +94,7 @@ type IncomingMessage struct {
 	Status    string `json:"status,omitempty"` // e.g., "sent", "accepted", "declined", "timeout"
 
 	// game-end specific fields
+	Winner uint   `json:"winner,omitempty"`
 	Reason string `json:"reason,omitempty"` // "Win" or "Forfeit"
 }
 
@@ -254,7 +253,7 @@ func (h *ChatHub) Run() {
 				}
 				h.mu.RUnlock()
 
-				// If accepted, create a new game and include the GameID in the update
+				// If accepted, create a new game and broadcast a game-created message
 				if strings.ToLower(inc.Status) == "accepted" {
 					// Create game where sender is host and recipient is opponent
 					if sender != 0 && recipient != 0 {
@@ -262,8 +261,25 @@ func (h *ChatHub) Run() {
 						if err != nil {
 							log.Printf("Error creating game on invite accept: %v", err)
 						} else {
-							// attach GameID so clients know the game was created
-							inc.GameID = game.ID
+							// Send game-created message to both players
+							gameCreatedMsg := GameCreatedMessage{
+								GameID:  game.ID,
+								Players: []uint{sender, recipient},
+								Time:    time.Now().Format(time.RFC3339),
+							}
+
+							gameCreatedJSON := map[string]interface{}{
+								"type":    "game-created",
+								"gameId":  gameCreatedMsg.GameID,
+								"players": gameCreatedMsg.Players,
+								"time":    gameCreatedMsg.Time,
+							}
+
+							for _, c := range conns {
+								if err := c.WriteJSON(gameCreatedJSON); err != nil {
+									log.Printf("Error sending game-created message: %v", err)
+								}
+							}
 						}
 					}
 				}
@@ -400,9 +416,90 @@ func (h *ChatHub) Run() {
 					}
 				}
 
-			case "game-end":
-				// game-end: notify all players in the game that the game has ended
-				// Reason should be "Win" or "Forfeit"
+				// After sending the turn, check if the game has ended
+				// (i.e., one side's ponds are all empty)
+				hostEmpty := true
+				for _, stones := range gameTurn.HostPonds {
+					if stones > 0 {
+						hostEmpty = false
+						break
+					}
+				}
+
+				opponentEmpty := true
+				for _, stones := range gameTurn.OpponentPonds {
+					if stones > 0 {
+						opponentEmpty = false
+						break
+					}
+				}
+
+				// If game has ended, calculate final scores and broadcast game-end message
+				if hostEmpty || opponentEmpty {
+					finalHostScore, finalOpponentScore, err := business.DetermineEndOfGameScores(inc.GameID)
+					if err != nil {
+						log.Printf("Error determining end of game scores: %v", err)
+					} else {
+						// Update game with winner
+						game, err := business.FetchGameByID(inc.GameID)
+						if err != nil {
+							log.Printf("Error fetching game for end game: %v", err)
+						} else {
+							var winnerID uint
+							if finalHostScore > finalOpponentScore {
+								winnerID = game.HostID
+							} else if finalOpponentScore > finalHostScore {
+								winnerID = game.OpponentID
+							} else {
+								// Tie - could set to 0 or handle differently
+								winnerID = 0
+							}
+
+							// Update game winner in database
+							if err := business.HandleGameEnd(gameTurn.GameID, gameTurn.TurnTaker, game.OpponentID, "win"); err != nil {
+								log.Printf("Error updating game winner: %v", err)
+							}
+
+							// Send game-end message to both players
+							gameEndMsg := IncomingMessage{
+								Type:          "game-end",
+								GameID:        inc.GameID,
+								Players:       inc.Players,
+								HostScore:     finalHostScore,
+								OpponentScore: finalOpponentScore,
+								Winner:        winnerID,
+							}
+
+							// Route to all players in the game
+							h.mu.RLock()
+							endConns := make([]*websocket.Conn, 0)
+							for c, uid := range h.clients {
+								if _, ok := targets[uid]; ok {
+									endConns = append(endConns, c)
+								}
+							}
+							h.mu.RUnlock()
+
+							for _, c := range endConns {
+								if err := c.WriteJSON(gameEndMsg); err != nil {
+									log.Printf("Error routing game-end: %v", err)
+									c.Close()
+									h.unregister <- c
+								}
+							}
+						}
+					}
+				}
+
+			case "game-created":
+				// game-created: notify both players that a game has been created
+				game, _, err := business.CreateGame(inc.Players[0], inc.Players[1])
+				if err != nil {
+					log.Printf("Error creating new game: %v", err)
+					continue
+				}
+				inc.GameID = game.ID
+
 				targets := make(map[uint]struct{}, len(inc.Players))
 				for _, id := range inc.Players {
 					targets[id] = struct{}{}
@@ -419,7 +516,7 @@ func (h *ChatHub) Run() {
 
 				for _, c := range conns {
 					if err := c.WriteJSON(inc); err != nil {
-						log.Printf("Error routing game-end: %v", err)
+						log.Printf("Error routing game-created: %v", err)
 						c.Close()
 						h.unregister <- c
 					}

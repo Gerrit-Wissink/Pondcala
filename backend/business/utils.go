@@ -205,12 +205,18 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 	(*playerPonds)[selected_index] = 0
 	currentIndex := selected_index + 1
 
+	// Track the last pond where a stone was placed
+	var lastPondIndex int = -1
+	var lastPondWasPlayerSide bool = false
+
 	// Distribute stones
 	for stonesToDistribute > 0 {
 		// Distribute in player's own ponds
 		for currentIndex < 6 && stonesToDistribute > 0 {
 			(*playerPonds)[currentIndex]++
 			stonesToDistribute--
+			lastPondIndex = currentIndex
+			lastPondWasPlayerSide = true
 			currentIndex++
 		}
 
@@ -218,7 +224,8 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 		if stonesToDistribute > 0 && currentIndex == 6 {
 			(*playerScore)++
 			stonesToDistribute--
-			currentIndex = 0 // Reset to start of opponent's ponds
+			lastPondIndex = -1 // Large pond
+			currentIndex = 0   // Reset to start of opponent's ponds
 		}
 
 		// If stones still remaining, distribute in opponent's ponds
@@ -231,6 +238,8 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 		for i := 0; i < 6 && stonesToDistribute > 0; i++ {
 			opponentPondsReversed[i]++
 			stonesToDistribute--
+			lastPondIndex = i
+			lastPondWasPlayerSide = false
 		}
 
 		// Copy reversed ponds back
@@ -243,5 +252,60 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 			currentIndex = 0
 		}
 	}
+
+	// Capture rule: If the last stone landed in an empty pond on the player's side
+	// (value is now 1) and it's not the large pond, capture that pond and the opposite pond
+	if lastPondWasPlayerSide && lastPondIndex >= 0 && lastPondIndex < 6 && (*playerPonds)[lastPondIndex] == 1 {
+		oppositeIndex := 5 - lastPondIndex
+		capturedStones := (*playerPonds)[lastPondIndex] + (*opponentPlayerPonds)[oppositeIndex]
+
+		if capturedStones > 1 { // Only capture if there are stones in the opposite pond
+			(*playerPonds)[lastPondIndex] = 0
+			(*opponentPlayerPonds)[oppositeIndex] = 0
+			(*playerScore) += capturedStones
+		}
+	}
+
 	return simHostPonds, simOpponentPonds, simHostScore, simOpponentScore, nil
+}
+
+func DetermineEndOfGameScores(gameID uint) (hostScore int, opponentScore int, err error) {
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get current board state: %w", err)
+	}
+
+	hostPonds, opponentPonds, hostScore, opponentScore, err := dbmethods.FetchCurrentBoardState(gameID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get current board state: %w", err)
+	}
+
+	// Check if either side's ponds are all empty
+	hostEmpty := true
+	for _, stones := range hostPonds {
+		if stones > 0 {
+			hostEmpty = false
+			break
+		}
+	}
+
+	opponentEmpty := true
+	for _, stones := range opponentPonds {
+		if stones > 0 {
+			opponentEmpty = false
+			break
+		}
+	}
+
+	// If one side is empty, collect remaining stones from the other side
+	if hostEmpty {
+		for _, stones := range opponentPonds {
+			opponentScore += stones
+		}
+	} else if opponentEmpty {
+		for _, stones := range hostPonds {
+			hostScore += stones
+		}
+	}
+
+	return hostScore, opponentScore, nil
 }

@@ -35,6 +35,7 @@ func main() {
 	mux.HandleFunc("/api/game/turn", TakeTurn)                  // POST - take a turn
 	mux.HandleFunc("/api/game/state", getGameState)             // GET - get game state
 	mux.HandleFunc("/api/game/user-games", GetAllGamesByUserID) // GET - fetch all games for a user
+	mux.HandleFunc("/api/game/end", EndGame)                    // POST - end a game
 
 	// Apply middleware to all routes except login
 	mw := AuthMiddleware(mux)
