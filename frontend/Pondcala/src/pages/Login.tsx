@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { apiClient } from "../utils/apiClient.js";
+// import { apiClient } from "../utils/apiClient.js";
 
 export default function Login() {
     const [username, setUsername] = useState("")
@@ -12,34 +12,34 @@ export default function Login() {
     async function handleLogin() {
         setErrorMessage("");
         event?.preventDefault();
-        try{
-            if (username.length < 1) {
-                throw new Error("Username is required")
-            }
-            if (password.length < 1) {
-                throw new Error("Password is required");
-            }
+        // try{
+        //     if (username.length < 1) {
+        //         throw new Error("Username is required")
+        //     }
+        //     if (password.length < 1) {
+        //         throw new Error("Password is required");
+        //     }
 
-            let requestBody = {
-                username,
-                password
-            }
+        //     let requestBody = {
+        //         username,
+        //         password
+        //     }
 
-            let response = await apiClient.post(SERVER_URL, requestBody)
+        //     let response = await apiClient.post(SERVER_URL, requestBody)
 
-            if(response.status !== 200 || response.data.Error) {
-                throw new Error(`${response.statusText}`)
-            }
+        //     if(response.status !== 200 || response.data.Error) {
+        //         throw new Error(`${response.statusText}`)
+        //     }
 
-            let user = response.data.User;
-            console.log("User returned from login", user);
+        //     let user = response.data.User;
+        //     console.log("User returned from login", user);
 
 
 
-        }catch (error) {
-            console.log(`Error logging in: ${error}`)
-            setErrorMessage(`${error}`)
-        }
+        // }catch (error) {
+        //     console.log(`Error logging in: ${error}`)
+        //     setErrorMessage(`${error}`)
+        // }
     }
 
     const inputStyle = {
