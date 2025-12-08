@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/data/dbmethods"
+	"backend/data/models"
 )
 
 func Sanitize(input string) string {

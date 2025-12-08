@@ -4,7 +4,7 @@ import LargePond from "../components/svg/largePond";
 import YourPondRow from "../components/yourPondRow";
 import OpponentPondRow from "../components/opponentPondRow";
 import Fish from "../components/svg/fish";
-import Chat from "../components/Chat";
+import Chat from "../components/chat";
 import LoadingModal from "../components/loadingModal";
 import apiClient, { getCookie } from "../utils/apiClient";
 import { sendMessage, connectWebSocket, getWebSocket } from "../utils/WebSockets";

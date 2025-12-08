@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/data/dbmethods"
+	"backend/data/models"
 )
 
 func ProcessLogin(username string, password string) (*models.User, error) {

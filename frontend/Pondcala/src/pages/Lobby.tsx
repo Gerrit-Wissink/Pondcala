@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCookie } from "../utils/apiClient";
 import apiClient from "../utils/apiClient";
-import Chat from "../components/Chat";
+import Chat from "../components/chat";
 import HostGame from "../components/hostGame";
 import FindGame from "../components/findGame";
 import ActiveGames from "../components/activeGames";

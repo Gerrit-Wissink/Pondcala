@@ -1,4 +1,4 @@
-module github.com/Gerrit-Wissink/Pondcala/backend
+module backend
 
 go 1.25.1
 

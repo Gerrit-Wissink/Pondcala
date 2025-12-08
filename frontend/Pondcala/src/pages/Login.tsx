@@ -11,10 +11,10 @@ export default function Login() {
         setErrorMessage("");
         event?.preventDefault();
         try{
-            if (username.length < 1) {
+            if (username.trim().length < 1) {
                 throw new Error("Username is required")
             }
-            if (password.length < 1) {
+            if (password.trim().length < 1) {
                 throw new Error("Password is required");
             }
 

@@ -4,7 +4,17 @@ import "./toggle.css";
 export default function FindGame() {
     const [publicGames, setPublicGames] = useState<string[]>([]);
     
-    
+    useEffect(() => {
+        // Placeholder: Fetch public games from server
+        const fetchPublicGames = async () => {
+            // Simulate fetching public games
+            const games = ["Player1", "Player2", "Player3"];
+            setPublicGames(games);
+        };
+
+        fetchPublicGames();
+    }, []);
+
     return (
         <div>
             <h1>Available Public Games</h1>

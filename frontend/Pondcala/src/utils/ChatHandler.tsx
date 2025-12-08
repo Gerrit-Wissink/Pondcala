@@ -108,6 +108,7 @@ function sendGameChatMessage(gameID: number, authorID: number, players: number[]
 
 export {
     displayLobbyMessage,
+    displayGameChatMessage,
     sendLobbyChatMessage,
     sendGameChatMessage
 };

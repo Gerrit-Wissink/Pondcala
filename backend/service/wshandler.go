@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/business"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/business"
+	"backend/data/dbmethods"
+	"backend/data/models"
 
 	"github.com/gorilla/websocket"
 )

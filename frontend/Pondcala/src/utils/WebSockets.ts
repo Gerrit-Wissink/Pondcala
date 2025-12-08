@@ -1,4 +1,4 @@
-import { displayLobbyMessage } from "./ChatHandler";
+import { displayLobbyMessage, displayGameChatMessage } from "./ChatHandler";
 
 let ws: WebSocket | null = null;
 
@@ -63,7 +63,16 @@ function handleMessage(message: any): void {
 
         case 'game-msg':
             // game chat targeted to players
-            window.dispatchEvent(new CustomEvent('game-msg', { detail: message }));
+            if (typeof displayGameChatMessage === 'function') {
+                const messageText = message.message;
+                const author = message.author;
+                const timestamp = message.time;
+                const gameID = message.gameID;
+                displayGameChatMessage(messageText, author, timestamp, gameID);
+            } else {
+                console.log('game-msg', message);
+            }
+            // window.dispatchEvent(new CustomEvent('game-msg', { detail: message }));
             break;
 
         case 'game-turn':

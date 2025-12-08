@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	// "strconv"
-	"github.com/Gerrit-Wissink/Pondcala/backend/business"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/business"
+	"backend/data/dbmethods"
+	"backend/data/models"
 )
 
 type ErrorResponse struct {
@@ -82,7 +82,7 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getGameState(w http.ResponseWriter, r *http.Request) {
+func GetGameState(w http.ResponseWriter, r *http.Request) {
 	// Set response headers
 	w.Header().Set("Content-Type", "application/json")
 

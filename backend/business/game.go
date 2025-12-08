@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/data/dbmethods"
+	"backend/data/models"
 )
 
 func ProcessTurn(gameID uint, userID uint, selectedIndex int, hostPonds []int, opponentPonds []int, userScore int) (*models.GameTurn, error) {

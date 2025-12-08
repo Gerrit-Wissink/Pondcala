@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/business"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/business"
+	"backend/data/models"
 )
 
 func Login(w http.ResponseWriter, r *http.Request) {

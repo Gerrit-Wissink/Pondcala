@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/business"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/business"
+	"backend/data/models"
 )
 
 func parseUintParam(s string) (uint64, error) {

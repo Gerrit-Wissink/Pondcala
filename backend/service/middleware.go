@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/business"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/business"
+	"backend/data/models"
 )
 
 // contextKey is a custom type to avoid collisions in context keys

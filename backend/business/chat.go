@@ -1,8 +1,8 @@
 package business
 
 import (
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/data/dbmethods"
+	"backend/data/models"
 )
 
 func GetAllLobbyMessages() ([]models.LobbyChat, error) {

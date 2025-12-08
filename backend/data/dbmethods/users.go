@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/dbmethods/db"
-	"github.com/Gerrit-Wissink/Pondcala/backend/data/models"
+	"backend/data/models"
 )
 
 func Login(username string, hashedPassword string) (*models.User, error) {
 	var user models.User
-	result := db.DB.Where("id = username", username).First(&user)
+	result := DB.Where("id = username", username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -25,7 +24,7 @@ func CreateSession(tokenHash string, userID uint, expiresAt time.Time) (*models.
 		CreatedAt: time.Now(),
 	}
 
-	result := db.DB.create(session)
+	result := DB.Create(session)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to create user: %w", result.Error)
 	}
@@ -35,7 +34,7 @@ func CreateSession(tokenHash string, userID uint, expiresAt time.Time) (*models.
 
 func VerifySession(tokenHash string) (*models.Session, error) {
 	var session models.Session
-	result := db.DB.Where("TokenHash = ?", tokenHash).First(&session)
+	result := DB.Where("TokenHash = ?", tokenHash).First(&session)
 	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, fmt.Errorf("failed to verify session: %w", result.Error)
 	}
@@ -56,7 +55,7 @@ func CreateUser(username, hashedPassword string) (*models.User, error) {
 		IsOnline: false,
 	}
 
-	result := db.DB.Create(user)
+	result := DB.Create(user)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to create user: %w", result.Error)
 	}
@@ -66,7 +65,7 @@ func CreateUser(username, hashedPassword string) (*models.User, error) {
 
 func GetUser(id uint) (*models.User, error) {
 	var user models.User
-	result := db.DB.First(&user, id)
+	result := DB.First(&user, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -75,7 +74,7 @@ func GetUser(id uint) (*models.User, error) {
 
 func GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
-	result := db.DB.Where("username = ?", username).First(&user)
+	result := DB.Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -84,13 +83,13 @@ func GetUserByUsername(username string) (*models.User, error) {
 
 func GetUserByTokenHash(tokenHash string) (*models.User, error) {
 	var session models.Session
-	result := db.DB.Where("token_hash = ?", tokenHash).First(&session)
+	result := DB.Where("token_hash = ?", tokenHash).First(&session)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to find session: %w", result.Error)
 	}
 
 	var user models.User
-	result = db.DB.First(&user, session.UserID)
+	result = DB.First(&user, session.UserID)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to find user: %w", result.Error)
 	}
@@ -100,7 +99,7 @@ func GetUserByTokenHash(tokenHash string) (*models.User, error) {
 
 func GetAllUsers() ([]models.User, error) {
 	var users []models.User
-	result := db.DB.Find(&users)
+	result := DB.Find(&users)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -109,7 +108,7 @@ func GetAllUsers() ([]models.User, error) {
 
 func GetAllUsersOnline() ([]models.User, error) {
 	var users []models.User
-	result := db.DB.Where("is_online = ?", true).Find(&users)
+	result := DB.Where("is_online = ?", true).Find(&users)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -121,13 +120,13 @@ func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
 	var user models.User
 
 	// First, check if user exists
-	result := db.DB.First(&user, id)
+	result := DB.First(&user, id)
 	if result.Error != nil {
 		return nil, fmt.Errorf("user not found: %w", result.Error)
 	}
 
 	// Update the user with provided fields
-	result = db.DB.Model(&user).Updates(updates)
+	result = DB.Model(&user).Updates(updates)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to update user: %w", result.Error)
 	}
@@ -139,7 +138,7 @@ func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
 	var userStats models.UserStats
 
 	// First, check if user stats exist
-	result := db.DB.Where("user_id = ?", id).First(&userStats)
+	result := DB.Where("user_id = ?", id).First(&userStats)
 
 	if result.Error != nil {
 		return fmt.Errorf("failed to update user stats: %w", result.Error)
@@ -161,7 +160,7 @@ func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
 		userStats.GamesPlayed += winsDelta + lossesDelta
 	}
 
-	result = db.DB.Save(&userStats)
+	result = DB.Save(&userStats)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update user stats: %w", result.Error)
 	}
@@ -172,7 +171,7 @@ func GetUserStats(id uint) (*models.UserStats, error) {
 	var userStats models.UserStats
 
 	// First, check if user stats exist
-	result := db.DB.Where("user_id = ?", id).First(&userStats)
+	result := DB.Where("user_id = ?", id).First(&userStats)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get user stats: %w", result.Error)
@@ -190,13 +189,13 @@ func UpdateUserStruct(id uint, userUpdate models.User) (*models.User, error) {
 	var user models.User
 
 	// First, check if user exists
-	result := db.DB.First(&user, id)
+	result := DB.First(&user, id)
 	if result.Error != nil {
 		return nil, fmt.Errorf("user not found: %w", result.Error)
 	}
 
 	// Update using struct (GORM will ignore zero values)
-	result = db.DB.Model(&user).Updates(userUpdate)
+	result = DB.Model(&user).Updates(userUpdate)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to update user: %w", result.Error)
 	}
@@ -206,7 +205,7 @@ func UpdateUserStruct(id uint, userUpdate models.User) (*models.User, error) {
 
 // DeleteUser performs a soft delete on a user
 func DeleteUser(id uint) error {
-	result := db.DB.Delete(&models.User{}, id)
+	result := DB.Delete(&models.User{}, id)
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete user: %w", result.Error)
 	}
@@ -220,7 +219,7 @@ func DeleteUser(id uint) error {
 
 // HardDeleteUser permanently deletes a user from the database
 func HardDeleteUser(id uint) error {
-	result := db.DB.Unscoped().Delete(&models.User{}, id)
+	result := DB.Unscoped().Delete(&models.User{}, id)
 	if result.Error != nil {
 		return fmt.Errorf("failed to permanently delete user: %w", result.Error)
 	}
@@ -234,7 +233,7 @@ func HardDeleteUser(id uint) error {
 
 // UpdateUserPassword updates only the user's password (with proper hashing)
 func UpdateUserPassword(id uint, hashedPassword string) error {
-	result := db.DB.Model(&models.User{}).Where("id = ?", id).Update("hashed_pw", hashedPassword)
+	result := DB.Model(&models.User{}).Where("id = ?", id).Update("hashed_pw", hashedPassword)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update password: %w", result.Error)
 	}
@@ -248,7 +247,7 @@ func UpdateUserPassword(id uint, hashedPassword string) error {
 
 // UpdateUserOnlineStatus updates the user's online status
 func UpdateUserOnlineStatus(id uint, isOnline bool) error {
-	result := db.DB.Model(&models.User{}).Where("id = ?", id).Update("is_online", isOnline)
+	result := DB.Model(&models.User{}).Where("id = ?", id).Update("is_online", isOnline)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update online status: %w", result.Error)
 	}
