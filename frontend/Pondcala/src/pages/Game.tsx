@@ -17,6 +17,7 @@ export default function Game() {
     const [opHighlighted, setOpHighlighted] = useState<number | null>(null);
     const [yourHighlighted, setYourHighlighted] = useState<number | null>(null);
     const [yourScore, setYourScore] = useState(0);
+    const [opponentScore, setOpponentScore] = useState(0);
     const [displayedScore, setDisplayedScore] = useState(0); // Animated score display
     const [turnCounter, setTurnCounter] = useState(1);
     const [fishSize, setFishSize] = useState(1);
@@ -284,11 +285,13 @@ export default function Game() {
             const endData = event.detail;
             console.log("Received game-end message:", endData);
             
-            // Update final scores
+            // Update final scores from server
             if (isHost) {
                 setYourScore(endData.hostScore || 0);
+                setOpponentScore(endData.opponentScore || 0);
             } else {
                 setYourScore(endData.opponentScore || 0);
+                setOpponentScore(endData.hostScore || 0);
             }
             
             // Clear all ponds
@@ -888,7 +891,7 @@ export default function Game() {
         <LoadingModal isLoading={loading} />
         <GameOverModal 
             isModalOpen={isEndingModalOpen} 
-            gameStats={{ yourScore, opponentScore: opponentCounts.reduce((a, b) => a + b, 0), turns: turnCounter }} 
+            gameStats={{ yourScore, opponentScore, turns: turnCounter }} 
             handleRematch={handleRematch} 
             handleBackToLobby={handleBackToLobby} 
             youWon={winner === currentUser.id} 
