@@ -493,7 +493,7 @@ export default function Game() {
 
     // Animate a turn based on server data
     async function animateTurn(turnData: any, isTurnTaker: boolean, prevHostPools: number[], prevOpponentPools: number[]): Promise<void> {
-        console.log("Animating turn:", turnData, "isTurnTaker:", isTurnTaker);
+        console.log("Animating turn:", turnData, "isTurnTaker:", isTurnTaker, "isHost:", isHost);
         console.log("Previous host ponds:", prevHostPools);
         console.log("Previous opponent ponds:", prevOpponentPools);
         
@@ -501,12 +501,18 @@ export default function Game() {
         const selectedIndex = turnData.selectedIndex ?? turnData.selected_index;
         console.log("Selected index:", selectedIndex);
         
-        // Use the previous state (before this turn) to calculate fish to move
-        const prevHostPonds = prevHostPools;
+        // Determine whose ponds to read from
+        // prevHostPools = actual host's ponds, prevOpponentPools = actual opponent's ponds
+        // We need to know if the turn taker was the host or opponent
+        // If isTurnTaker && isHost => use prevHostPools
+        // If isTurnTaker && !isHost => use prevOpponentPools
+        // If !isTurnTaker && isHost => use prevOpponentPools
+        // If !isTurnTaker && !isHost => use prevHostPools
+        const prevTurnTakerPonds = (isTurnTaker === isHost) ? prevHostPools : prevOpponentPools;
         
         // Calculate fish to move from the PREVIOUS state
-        const fishToMove = prevHostPonds[selectedIndex];
-        console.log("Fish to move from prevHostPonds[" + selectedIndex + "]:", fishToMove);
+        const fishToMove = prevTurnTakerPonds[selectedIndex];
+        console.log("Fish to move from prevTurnTakerPonds[" + selectedIndex + "]:", fishToMove, "isTurnTaker:", isTurnTaker, "isHost:", isHost);
         if (fishToMove === 0) return; // No animation if no fish
         
         // Determine whose ponds to use for animation
