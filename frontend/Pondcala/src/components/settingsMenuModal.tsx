@@ -17,7 +17,7 @@ export default function SettingsMenuModal({open, setOpen, playing, handleForfeit
         deleteCookie("session_token");
         localStorage.removeItem("token");
         //Need to remove session cookie and redirect to login page
-        window.location.href = "/login";
+        window.location.href = "/#/login";
     }
 
     return (
@@ -54,7 +54,7 @@ export default function SettingsMenuModal({open, setOpen, playing, handleForfeit
                 {playing && <button onClick={() => {
                     console.log("Returning to main menu...");
                     // Add return to menu logic here
-                    window.location.href = "/";
+                    window.location.href = "/#/lobby";
                 }}>
                     Back to Main Menu
                 </button>}

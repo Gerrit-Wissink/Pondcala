@@ -5,7 +5,7 @@ export default function ActiveGames({games}: {games: Array<{ID: number, Host: {U
     function handleJoinGame(gameID: number) {
         // Implement join game logic here
         console.log(`Joining game with ID: ${gameID}`);
-        window.location.href = `/game/${gameID}`;
+        window.location.href = `/#/game?gameID=${gameID}`;
     }
 
     return (

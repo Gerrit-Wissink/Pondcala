@@ -23,7 +23,7 @@ export default function Lobby() {
         const token = getCookie("session_token");
         if (!token || token.length < 1) {
             //Redirect to login page
-            window.location.href = "/login";
+            window.location.href = "/#/login";
         }else {
             localStorage.setItem("token", token);
         }
@@ -120,7 +120,7 @@ export default function Lobby() {
             
             // Redirect to the game page with the gameID
             if (gameData.gameId) {
-                window.location.href = `/game?gameID=${gameData.gameId}`;
+                window.location.href = `/#/game?gameID=${gameData.gameId}`;
             }
         };
 

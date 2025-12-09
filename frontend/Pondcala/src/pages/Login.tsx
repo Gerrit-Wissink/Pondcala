@@ -37,7 +37,7 @@ export default function Login() {
                 throw new Error("Invalid login credentials");
             }else {
                 // Redirect to lobby or main page
-                window.location.href = "/";
+                window.location.href = "/#/lobby";
             }
 
         }catch (error) {
@@ -76,7 +76,7 @@ export default function Login() {
                 throw new Error("Invalid login credentials");
             }else {
                 // Redirect to lobby or main page
-                window.location.href = "/";
+                window.location.href = "/#/lobby";
             }
         }catch (error) {
             console.log(`Error creating account: ${error}`)

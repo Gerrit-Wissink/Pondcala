@@ -83,15 +83,15 @@ export default function Game() {
                         localStorage.setItem("user", JSON.stringify(user));
                     } else {
                         // Invalid token, redirect to login
-                        window.location.href = "/login";
+                        window.location.href = "/#/login";
                     }
                 }).catch(error => {
                     console.error("Error fetching user by token:", error);
-                    window.location.href = "/login";
+                    window.location.href = "/#/login";
                 });
             } catch (error) {
                 console.error("Error in fetchUserByToken:", error);
-                window.location.href = "/login";
+                window.location.href = "/#/login";
             }
         }
         if (!currentUser || !currentUser.id) {
@@ -108,7 +108,7 @@ export default function Game() {
                 console.log("Fetched game state:", gameState);
                 if (!currentUser || !currentUser.id || currentUser.id !== gameState.Host.id && currentUser.id !== gameState.Opponent.id) {
                     alert("You are not a participant in this game.");
-                    window.location.href = "/";
+                    window.location.href = "/#/lobby";
                     return;
                 }
                 const isHostPlayer = currentUser.id === gameState.Host.id;
@@ -273,11 +273,11 @@ export default function Game() {
         // Placeholder for rematch logic
         // Could involve sending a WebSocket message to the server to create a new game with the same players
         console.log("Rematch requested");
-        window.location.href = `/`; // Redirect to lobby for now
+        window.location.href = `/#/lobby`; // Redirect to lobby for now
     }
 
     function handleBackToLobby() {
-        window.location.href = `/`;
+        window.location.href = `/#/lobby`;
     }
 
     async function SendTurn(index: number) {
