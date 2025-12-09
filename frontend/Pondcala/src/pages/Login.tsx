@@ -29,7 +29,7 @@ export default function Login() {
                 throw new Error(response.data.error || response.statusText)
             }
 
-            let user = response.data.User;
+            let user = response.data.user;
             console.log("User returned from login", user);
             localStorage.setItem("user", JSON.stringify(user));
 
@@ -37,7 +37,7 @@ export default function Login() {
                 throw new Error("Invalid login credentials");
             }else {
                 // Redirect to lobby or main page
-                window.location.href = "/#/lobby";
+                window.location.href = "/#/";
             }
 
         }catch (error) {
@@ -68,7 +68,7 @@ export default function Login() {
                 throw new Error(response.data.error || response.statusText)
             }
 
-            let user = response.data.User;
+            let user = response.data.user;
             console.log("User returned from account creation", user);
             localStorage.setItem("user", JSON.stringify(user));
 
@@ -76,7 +76,7 @@ export default function Login() {
                 throw new Error("Invalid login credentials");
             }else {
                 // Redirect to lobby or main page
-                window.location.href = "/#/lobby";
+                window.location.href = "/#/";
             }
         }catch (error) {
             console.log(`Error creating account: ${error}`)

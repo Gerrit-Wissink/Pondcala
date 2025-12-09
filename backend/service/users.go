@@ -22,8 +22,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		username string
-		password string
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 
 	//If the program is not able to parse the request body with the expected request struct (JSON is formatted unexpectedly)
@@ -33,7 +33,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := business.ProcessLogin(req.username, req.password)
+	user, err := business.ProcessLogin(req.Username, req.Password)
 
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
