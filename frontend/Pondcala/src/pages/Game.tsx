@@ -484,12 +484,17 @@ export default function Game() {
         // Determine whose ponds to use for animation
         const animateAsYou = isTurnTaker;
         
+        // Mirror the selectedIndex when viewing opponent's turn
+        // From opponent's perspective: index 5 is their rightmost pond
+        // From your perspective: their index 5 is your opponentPonds[0] (leftmost)
+        const mirroredIndex = animateAsYou ? selectedIndex : (5 - selectedIndex);
+        
         // Sync ref with current opponent state
         opCountsRef.current = [...(animateAsYou ? opponentCounts : counts)];
         
         // Perform the animation
         await animatedMoveFishGeneric(
-            selectedIndex,
+            mirroredIndex,
             fishToMove,
             animateAsYou
         );
@@ -575,7 +580,8 @@ export default function Game() {
                         playerLargePond.current,
                         opponentPlayerPondRefs,
                         setOpponentPlayerHighlighted,
-                        opCountsRef
+                        opCountsRef,
+                        animateAsYourTurn
                     );
                     
                     remainingFish = result.remainingFish;
@@ -668,34 +674,39 @@ export default function Game() {
         fromEl: HTMLElement | SVGElement | null,
         opponentPondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
         setOpponentHighlighted: (index: number | null) => void,
-        opCountsRef: React.MutableRefObject<number[]>
+        opCountsRef: React.MutableRefObject<number[]>,
+        animateAsYourTurn: boolean
     ): Promise<{ remainingFish: number; lastPondIndex: number }> {
-        console.log("Animating opponent ponds with", fishCount, "fish");
+        console.log("Animating opponent ponds with", fishCount, "fish", "asYourTurn:", animateAsYourTurn);
         const temp = [...opCountsRef.current];
         const len = temp.length;
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
-        // From opponent's perspective they go right-to-left (5->0)
-        // From your perspective watching them, you see left-to-right (0->5)
+        // When YOU make a move: opponent ponds go right-to-left (5->4->3)
+        // When watching THEM: opponent ponds go left-to-right (0->1->2)
         for (let i = 0; i < fishCount && i < len; i++) {
-            setOpponentHighlighted(i);
+            // Calculate the actual index based on direction
+            const actualIndex = animateAsYourTurn ? (len - 1 - i) : i;
+            
+            setOpponentHighlighted(actualIndex);
 
             let sourceEl: HTMLElement | SVGElement | null = null;
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                sourceEl = opponentPondRefs.current[i - 1] ?? null;
+                const prevIndex = animateAsYourTurn ? (len - i) : (i - 1);
+                sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
-            const toEl = opponentPondRefs.current[i];
+            const toEl = opponentPondRefs.current[actualIndex];
             triggerAnimate(sourceEl ?? null, toEl ?? null, remainingFish);
 
             await new Promise(resolve => setTimeout(resolve, 850));
 
-            temp[i] += 1;
+            temp[actualIndex] += 1;
             remainingFish--;
-            lastPondIndex = i;
+            lastPondIndex = actualIndex;
 
             opCountsRef.current = [...temp];
 
