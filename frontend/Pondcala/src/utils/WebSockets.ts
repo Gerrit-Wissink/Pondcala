@@ -24,9 +24,9 @@ function connectWebSocket(): void {
         console.log(`Websocket disconnected`);
         console.log(`WebSocket readyState:`, ws?.readyState);
 
-        console.log(`Attempting to reconnect...`);
-
-        connectWebSocket();
+        // Don't auto-reconnect - let user refresh or manually reconnect
+        // Infinite reconnection can cause duplicate messages
+        console.log(`WebSocket closed. Refresh page to reconnect.`);
     };
 
     ws.onmessage = (event) => {
@@ -58,7 +58,7 @@ function handleMessage(message: any): void {
             */
             if (typeof displayLobbyMessage === 'function') {
                 const messageText = message.message;
-                const author = message.author;
+                const author = String(message.author || 'Unknown');
                 const timestamp = message.time;
                 displayLobbyMessage(messageText, author, timestamp);
             } else {
@@ -70,7 +70,7 @@ function handleMessage(message: any): void {
             // game chat targeted to players
             if (typeof displayGameChatMessage === 'function') {
                 const messageText = message.message;
-                const author = message.author;
+                const author = String(message.author || 'Unknown');
                 const timestamp = message.time;
                 const gameID = message.gameID;
                 displayGameChatMessage(messageText, author, timestamp, gameID);

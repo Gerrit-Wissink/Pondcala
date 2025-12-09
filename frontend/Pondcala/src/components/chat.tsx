@@ -119,9 +119,9 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
                     {messages.map((msg: any) => (
                         <ChatMessage 
                             key={msg.id} 
-                            authorID={msg.sender} 
-                            message={msg.content} 
-                            timestamp={msg.timestamp} 
+                            authorID={String(msg.author)} 
+                            message={msg.message} 
+                            timestamp={new Date(msg.timestamp).toLocaleTimeString('en-US', { hour12: false })} 
                         />
                     ))}
                 </div>

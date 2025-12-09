@@ -2,7 +2,7 @@ import { getWebSocket } from "./WebSockets";
 import ChatMessage from "../components/chatMessage";
 import { createRoot } from "react-dom/client";
 
-function displayLobbyMessage(message: any, author: string, timestamp: string): void {
+function displayLobbyMessage(messageText: string, author: string, timestamp: string): void {
     const chatContent = document.getElementById(`lobby-chat-content`);
     if(!chatContent) return;
     
@@ -14,12 +14,12 @@ function displayLobbyMessage(message: any, author: string, timestamp: string): v
     
     // Render the ChatMessage component into the container
     const root = createRoot(messageContainer);
-    root.render(<ChatMessage authorID={author} message={message.message} timestamp={timeText} />);
+    root.render(<ChatMessage authorID={author} message={messageText} timestamp={timeText} />);
     
     chatContent.scrollTop = chatContent.scrollHeight;
 }
 
-function displayGameChatMessage(message: any, author: string, timestamp: string, gameID: string): void {
+function displayGameChatMessage(messageText: string, author: string, timestamp: string, gameID: string): void {
     // TODO: Implement game chat message display
     const chatContent = document.getElementById(`game-${gameID}-chat-content`);
     if(!chatContent) return;
@@ -32,7 +32,7 @@ function displayGameChatMessage(message: any, author: string, timestamp: string,
     
     // Render the ChatMessage component into the container
     const root = createRoot(messageContainer);
-    root.render(<ChatMessage authorID={author} message={message.message} timestamp={timeText} />);
+    root.render(<ChatMessage authorID={author} message={messageText} timestamp={timeText} />);
     
     chatContent.scrollTop = chatContent.scrollHeight;
 }
