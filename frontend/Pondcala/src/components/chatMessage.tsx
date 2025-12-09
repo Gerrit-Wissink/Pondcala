@@ -1,6 +1,20 @@
 import { getUsername } from "../utils/UserCache";
+import { useEffect, useState } from "react";
 
 export default function ChatMessage({authorID, message, timestamp}: {authorID: string, message: string, timestamp: string}) {
+    const [username, setUsername] = useState<string>(`User ${authorID}`);
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+            const parsedId = parseInt(authorID, 10);
+            if (!isNaN(parsedId)) {
+                const name = await getUsername(parsedId);
+                setUsername(name);
+            }
+        };
+        fetchUsername();
+    }, [authorID]);
+
     const chatMessageStyle: React.CSSProperties = {
         padding: '0.5em',
         background: '#f5f5f5',
@@ -23,7 +37,7 @@ export default function ChatMessage({authorID, message, timestamp}: {authorID: s
 
     return (
         <div style={chatMessageStyle}>
-            <strong>{getUsername(parseInt(authorID))}:</strong> <span style={messageTextStyle}>{message}</span> <em style={messageTimeStyle}>({timestamp})</em>
+            <strong>{username}:</strong> <span style={messageTextStyle}>{message}</span> <em style={messageTimeStyle}>({timestamp})</em>
         </div>
     );
 }
