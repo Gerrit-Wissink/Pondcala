@@ -504,17 +504,16 @@ export default function Game() {
         // Determine whose ponds to use for animation
         const animateAsYou = isTurnTaker;
         
-        // Mirror the selectedIndex when viewing opponent's turn
-        // From opponent's perspective: index 5 is their rightmost pond
-        // From your perspective: their index 5 is your opponentPonds[0] (leftmost)
-        const mirroredIndex = animateAsYou ? selectedIndex : (5 - selectedIndex);
+        // Use the actual selectedIndex from the server, don't mirror it
+        // The pond refs are already displayed in the correct positions
+        // so index 0 on server = index 0 in the ref array
         
         // Sync ref with current opponent state
         opCountsRef.current = [...(animateAsYou ? opponentCounts : counts)];
         
         // Perform the animation
         await animatedMoveFishGeneric(
-            mirroredIndex,
+            selectedIndex,  // Use actual index, not mirrored
             fishToMove,
             animateAsYou
         );
@@ -550,43 +549,34 @@ export default function Game() {
             return temp;
         });
         
-        // When viewing opponent's turn, they've picked their rightmost pond
-        // After mirroring, this appears as index 0, but fish should go directly to their large pond
-        // (they don't have any more ponds to fill on their side)
-        let skipToLargePond = !animateAsYourTurn;
-        
         while (remainingFish > 0) {
             const len = 6; // Always 6 ponds
             
-            // Move fish in player's own ponds (skip if viewing opponent's turn - they picked their last pond)
-            if (!skipToLargePond) {
-                while (remainingFish > 0 && currentIndex < len) {
-                    await increaseIndexAnimatedGeneric(
-                        lastSourceIndex,
-                        currentIndex,
-                        remainingFish,
-                        playerPondRefs,
-                        setPlayerHighlighted,
-                        setPlayerCounts
-                    );
-                    remainingFish--;
-                    lastSourceIndex = currentIndex;
-                    lastPondIndex = currentIndex;
-                    lastPondWasPlayerSide = true;
-                    currentIndex++;
-                    
-                    if (remainingFish === 0) break;
-                }
+            // Move fish in player's own ponds
+            while (remainingFish > 0 && currentIndex < len) {
+                await increaseIndexAnimatedGeneric(
+                    lastSourceIndex,
+                    currentIndex,
+                    remainingFish,
+                    playerPondRefs,
+                    setPlayerHighlighted,
+                    setPlayerCounts
+                );
+                remainingFish--;
+                lastSourceIndex = currentIndex;
+                lastPondIndex = currentIndex;
+                lastPondWasPlayerSide = true;
+                currentIndex++;
+                
+                if (remainingFish === 0) break;
             }
             
             // Hit the edge - add to player's large pond
-            if ((currentIndex >= len || skipToLargePond) && remainingFish > 0) {
+            if (currentIndex >= len && remainingFish > 0) {
                 console.log("Hit the edge - animating to large pond");
                 
                 // Animate to player's large pond
-                const fromEl = skipToLargePond 
-                    ? playerPondRefs.current[selectedIndex]  // Coming from the selected opponent pond
-                    : playerPondRefs.current[lastSourceIndex];  // Coming from last pond in sequence
+                const fromEl = playerPondRefs.current[lastSourceIndex];
                 const toEl = playerLargePond.current;
                 triggerAnimate(fromEl ?? null, toEl ?? null, remainingFish);
                 await new Promise(resolve => setTimeout(resolve, 850));
@@ -623,9 +613,6 @@ export default function Game() {
                     currentIndex = 0;
                     lastSourceIndex = -1;
                 }
-                
-                // Clear skip flag after first iteration
-                skipToLargePond = false;
             }
         }
         
