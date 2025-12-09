@@ -151,8 +151,11 @@ export default function Game() {
                 if (gameState.LastTwoTurns && gameState.LastTwoTurns.length > 1) {
                     // Set the board state to the previous turn (before the last turn)
                     const prevTurn = gameState.LastTwoTurns[0];
-                    setCounts(isHostPlayer ? prevTurn.host_ponds : prevTurn.opponent_ponds);
-                    setOpponentCounts(isHostPlayer ? prevTurn.opponent_ponds : prevTurn.host_ponds);
+                    const prevHostPonds = prevTurn.host_ponds;
+                    const prevOpponentPonds = prevTurn.opponent_ponds;
+                    
+                    setCounts(isHostPlayer ? prevHostPonds : prevOpponentPonds);
+                    setOpponentCounts(isHostPlayer ? prevOpponentPonds : prevHostPonds);
                     setYourScore(isHostPlayer ? prevTurn.host_score : prevTurn.opponent_score);
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber - 1)
@@ -165,9 +168,9 @@ export default function Game() {
                         // Determine if the turn taker was the current user
                         const isTurnTaker = lastTurn.turn_taker === currentUser.id;
                         
-                        // Animate the last turn
+                        // Animate the last turn with the previous state
                         setIsAnimating(true);
-                        await animateTurn(lastTurn, isTurnTaker);
+                        await animateTurn(lastTurn, isTurnTaker, prevHostPonds, prevOpponentPonds);
                         setIsAnimating(false);
                         
                         // Set the final board state
@@ -224,10 +227,13 @@ export default function Game() {
             // Determine if this turn was taken by the current user or opponent
             const isTurnTaker = turnData.turnTaker === currentUser?.id;
             
-            // Animate the turn
-            await animateTurn(turnData, isTurnTaker);
+            // Store the CURRENT state as the "previous" state before this turn
+            // This is needed because animateTurn needs to know how many fish were picked up
+            const prevHostPools = isHost ? [...counts] : [...opponentCounts];
+            const prevOpponentPools = isHost ? [...opponentCounts] : [...counts];
             
-            // Update board state from WebSocket message
+            // Update board state from WebSocket message FIRST
+            // (Animation will use the saved previous state)
             if (isHost) {
                 setCounts(turnData.hostPools);
                 setOpponentCounts(turnData.opponentPools);
@@ -237,6 +243,9 @@ export default function Game() {
                 setOpponentCounts(turnData.hostPools);
                 setYourScore(turnData.opponentScore || 0);
             }
+            
+            // Animate the turn using the previous state
+            await animateTurn(turnData, isTurnTaker, prevHostPools, prevOpponentPools);
             
             // Update whose turn it is
             if (turnData.whoseTurn) {
@@ -483,22 +492,21 @@ export default function Game() {
     }
 
     // Animate a turn based on server data
-    async function animateTurn(turnData: any, isTurnTaker: boolean): Promise<void> {
+    async function animateTurn(turnData: any, isTurnTaker: boolean, prevHostPools: number[], prevOpponentPools: number[]): Promise<void> {
         console.log("Animating turn:", turnData, "isTurnTaker:", isTurnTaker);
+        console.log("Previous host ponds:", prevHostPools);
+        console.log("Previous opponent ponds:", prevOpponentPools);
         
         // Handle both snake_case (from database) and camelCase (from WebSocket)
         const selectedIndex = turnData.selectedIndex ?? turnData.selected_index;
+        console.log("Selected index:", selectedIndex);
         
-        // Determine the before/after states to figure out fish movement
-        // We need to simulate the turn to know the animation path
+        // Use the previous state (before this turn) to calculate fish to move
+        const prevHostPonds = prevHostPools;
         
-        // Get the previous state (before this turn)
-        const prevHostPonds = isTurnTaker 
-            ? (isHost ? counts : opponentCounts)
-            : (isHost ? opponentCounts : counts);
-        
-        // Calculate fish to move
+        // Calculate fish to move from the PREVIOUS state
         const fishToMove = prevHostPonds[selectedIndex];
+        console.log("Fish to move from prevHostPonds[" + selectedIndex + "]:", fishToMove);
         if (fishToMove === 0) return; // No animation if no fish
         
         // Determine whose ponds to use for animation
@@ -508,8 +516,8 @@ export default function Game() {
         // The pond refs are already displayed in the correct positions
         // so index 0 on server = index 0 in the ref array
         
-        // Sync ref with current opponent state
-        opCountsRef.current = [...(animateAsYou ? opponentCounts : counts)];
+        // Sync ref with previous opponent state (before this turn)
+        opCountsRef.current = [...(animateAsYou ? prevOpponentPools : prevHostPools)];
         
         // Perform the animation
         await animatedMoveFishGeneric(
