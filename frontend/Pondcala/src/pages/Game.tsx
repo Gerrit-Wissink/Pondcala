@@ -169,7 +169,10 @@ export default function Game() {
                     setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
                     setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
                     setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
-                    setTurnTaker(gameState.LastTwoTurns[gameState.LastTwoTurns.length - 1].turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                    const latestTurn = gameState.LastTwoTurns && gameState.LastTwoTurns.length > 0 ? gameState.LastTwoTurns[0] : null;
+                    if (latestTurn) {
+                        setTurnTaker(latestTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                    }
                     setTurnCounter(gameState.TurnNumber);
                 }
             }catch (error) {
@@ -668,34 +671,33 @@ export default function Game() {
         opCountsRef: React.MutableRefObject<number[]>
     ): Promise<{ remainingFish: number; lastPondIndex: number }> {
         console.log("Animating opponent ponds with", fishCount, "fish");
-        const temp = [...opCountsRef.current].reverse();
+        const temp = [...opCountsRef.current];
         const len = temp.length;
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
+        // From opponent's perspective they go right-to-left (5->0)
+        // From your perspective watching them, you see left-to-right (0->5)
         for (let i = 0; i < fishCount && i < len; i++) {
-            const originalIndex = len - 1 - i;
-
-            setOpponentHighlighted(originalIndex);
+            setOpponentHighlighted(i);
 
             let sourceEl: HTMLElement | SVGElement | null = null;
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                const prevOpponentIndex = len - i;
-                sourceEl = opponentPondRefs.current[prevOpponentIndex] ?? null;
+                sourceEl = opponentPondRefs.current[i - 1] ?? null;
             }
 
-            const toEl = opponentPondRefs.current[originalIndex];
+            const toEl = opponentPondRefs.current[i];
             triggerAnimate(sourceEl ?? null, toEl ?? null, remainingFish);
 
             await new Promise(resolve => setTimeout(resolve, 850));
 
             temp[i] += 1;
             remainingFish--;
-            lastPondIndex = originalIndex;
+            lastPondIndex = i;
 
-            opCountsRef.current = [...temp].reverse();
+            opCountsRef.current = [...temp];
 
             await new Promise(resolve => setTimeout(resolve, 200));
             setOpponentHighlighted(null);
