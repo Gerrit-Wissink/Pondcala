@@ -26,6 +26,11 @@ func HashPassword(input string) (string, error) {
 	return string(hashBytes), nil
 }
 
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
 func CheckUsernameUniqueness(username string) (bool, error) {
 	user, err := dbmethods.GetUserByUsername(username)
 	if err != nil {
@@ -270,10 +275,6 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 }
 
 func DetermineEndOfGameScores(gameID uint) (hostScore int, opponentScore int, err error) {
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to get current board state: %w", err)
-	}
-
 	hostPonds, opponentPonds, hostScore, opponentScore, err := dbmethods.FetchCurrentBoardState(gameID)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get current board state: %w", err)

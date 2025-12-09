@@ -20,16 +20,15 @@ func ProcessLogin(username string, password string) (*models.User, error) {
 		return nil, fmt.Errorf("Password is required")
 	}
 
-	hash_password, h_err := HashPassword(_password)
-
-	if h_err != nil {
-		return nil, h_err
-	}
-
-	user, d_err := dbmethods.Login(_username, hash_password)
+	user, d_err := dbmethods.GetUserByUsername(_username)
 
 	if d_err != nil {
-		return nil, d_err
+		return nil, fmt.Errorf("Invalid username or password")
+	}
+
+	// Compare the provided password with the stored hash
+	if !CheckPasswordHash(_password, user.Password) {
+		return nil, fmt.Errorf("Invalid username or password")
 	}
 
 	return user, nil

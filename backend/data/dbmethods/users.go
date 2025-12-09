@@ -9,7 +9,7 @@ import (
 
 func Login(username string, hashedPassword string) (*models.User, error) {
 	var user models.User
-	result := DB.Where("id = username", username).First(&user)
+	result := DB.Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
