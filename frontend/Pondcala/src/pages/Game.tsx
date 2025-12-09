@@ -10,6 +10,7 @@ import apiClient, { getCookie } from "../utils/apiClient";
 import { sendMessage, connectWebSocket, getWebSocket } from "../utils/WebSockets";
 import GameOverModal from "../components/gameOverModal";
 import SettingsMenuModal from "../components/settingsMenuModal";
+import GameInvitationModal from "../components/gameInvitationModal";
 
 export default function Game() {
     const [counts, setCounts] = useState(Array(6).fill(4));
@@ -44,6 +45,7 @@ export default function Game() {
     const [loading, setLoading] = useState<boolean>(false);
     const [isEndingModalOpen, setIsEndingModalOpen] = useState<boolean>(false);
     const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState<boolean>(false);
+    const [invitations, setInvitations] = useState<any[]>([]);
 
     const loadingTimeoutRef = useRef<number | null>(null);
 
@@ -343,6 +345,34 @@ export default function Game() {
         };
     }, [isHost, gameID]); //Listen for game-end WebSocket messages
 
+    // Listen for game invitations (for rematch)
+    useEffect(() => {
+        const handleInvite = (event: CustomEvent) => {
+            const inviteData = event.detail;
+            console.log("Received invite message:", inviteData);
+            
+            // Only show invitation modal if game has ended
+            if (winner !== null) {
+                setInvitations((prevInvitations) => {
+                    // Check if invitation from this sender already exists
+                    const existingInvite = prevInvitations.find(
+                        (inv) => inv.sender === inviteData.sender
+                    );
+                    if (existingInvite) {
+                        return prevInvitations; // Don't add duplicate
+                    }
+                    return [...prevInvitations, inviteData];
+                });
+            }
+        };
+
+        window.addEventListener('invite', handleInvite as any);
+        
+        return () => {
+            window.removeEventListener('invite', handleInvite as any);
+        };
+    }, [winner]); //Listen for invite WebSocket messages
+
     useEffect(() => {
         return () => {
             // Cleanup on unmount
@@ -356,10 +386,29 @@ export default function Game() {
     }, []);
 
     function handleRematch() {
-        // Placeholder for rematch logic
-        // Could involve sending a WebSocket message to the server to create a new game with the same players
-        console.log("Rematch requested");
-        window.location.href = `/#/`; // Redirect to lobby for now
+        // Send rematch invitation to opponent
+        const opponentID = players.find(p => p !== currentUser.id);
+        if (!opponentID) {
+            console.error("Could not find opponent ID");
+            return;
+        }
+
+        const inviteMessage = {
+            type: "invite",
+            sender: currentUser.id,
+            recipient: opponentID,
+            status: "pending",
+            isRematch: true
+        };
+
+        const sent = sendMessage(inviteMessage);
+        if (sent) {
+            console.log("Rematch invitation sent");
+            alert("Rematch invitation sent!");
+        } else {
+            console.error("Failed to send rematch invitation");
+            alert("Failed to send rematch invitation. Please try again.");
+        }
     }
 
     function handleBackToLobby() {
@@ -930,6 +979,13 @@ export default function Game() {
             youWon={winner === currentUser.id} 
             setIsEndingModalOpen={setIsEndingModalOpen} 
         />
+        {invitations.length > 0 && (
+            <GameInvitationModal 
+                invite={invitations[0]} 
+                setInvitations={setInvitations}
+                isRematch={invitations[0].isRematch || false}
+            />
+        )}
         <SettingsMenuModal
             open={isSettingsMenuOpen}
             setOpen={setIsSettingsMenuOpen}
