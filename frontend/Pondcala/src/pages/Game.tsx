@@ -710,9 +710,18 @@ export default function Game() {
             const toEl = (backendIndex >= 0 && refIndex >= 0 && refIndex <= 5) ? pondRefs.current[refIndex] : null;
             triggerAnimate(fromEl ?? null, toEl ?? null, currentFishRemaining);
 
-            // For highlighting, use the ref index (visual position) directly
-            // If highlighting opponent ponds during opponent's turn, also invert for JSX mirroring
-            const highlightIndex = shouldMirrorHighlight ? (5 - backendIndex) : refIndex;
+            // For highlighting:
+            // - If highlighting YOUR ponds: use ref index directly (no transformation)
+            // - If highlighting OPPONENT ponds: use ref index, but JSX will apply 5-x transformation
+            //   So we need to pre-invert it to counteract the JSX transformation
+            let highlightIndex;
+            if (shouldMirrorHighlight) {
+                // Opponent ponds with JSX mirroring - use backend index, JSX will transform it
+                highlightIndex = backendIndex;
+            } else {
+                // Your ponds without JSX mirroring - use ref index directly
+                highlightIndex = refIndex;
+            }
             setHighlighted(highlightIndex);
 
             setTimeout(() => {
