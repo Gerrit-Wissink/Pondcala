@@ -7,10 +7,12 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
     const [selectedOpponent, setSelectedOpponent] = useState<number | null>(null);
     const [users, setUsers] = useState<any[]>([]);
     const [allowAnyone, setAllowAnyone] = useState<boolean>(false);
+    const [status, setStatus] = useState<string>("");
 
     useEffect(() => {
         async function fetchUsers() {
             try {
+                console.log("Fetching users for invitation list...");
                 console.log("Fetching users for invitation list...");
                 const response = await apiClient.get("/api/users/online");
                 console.log("Response", response);
@@ -44,6 +46,7 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
         };
         
         sendMessage(inviteMessage);
+        setStatus(`Invite sent to user ${opponent}`);
     }
     
     
@@ -63,7 +66,9 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
                             <option 
                                 key={index}
                                 value={player.id}
+                                value={player.id}
                             >
+                                {player.username}
                                 {player.username}
                             </option>
                         ))}
@@ -80,6 +85,7 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
                         Send Invite
                     </button>
                 </div>
+                <h2>{status}</h2>
                 {/* <!-- Rounded switch --> */}
                 <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px', flexDirection: 'row'}}>
                     <strong>Allow Anyone to Join</strong>

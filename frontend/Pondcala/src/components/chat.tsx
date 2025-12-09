@@ -7,6 +7,7 @@ import {useState, useEffect, useRef} from "react";
 export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     
     const [messages, setMessages] = useState<any[]>([]);
+    const chatContentRef = useRef<HTMLDivElement>(null);
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
     const chatContentRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,13 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
             window.removeEventListener('websocket-reconnected', handleReconnect);
         };
     }, [type, gameID])
+
+    // Auto-scroll to bottom when messages change
+    useEffect(() => {
+        if (chatContentRef.current) {
+            chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     function handleSendButtonClick() {
         if (type === "lobby") {
@@ -189,6 +197,7 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
                         id={`${idPrefix}-chat-message`} 
                         placeholder="Type a message..."
                         style={textareaStyle}
+                        onKeyDown={handleKeyDown}
                         onFocus={(e) => {
                             e.currentTarget.style.outline = `2px solid ${primaryColor}`;
                             e.currentTarget.style.outlineOffset = '0';

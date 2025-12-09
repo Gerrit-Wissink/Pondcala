@@ -93,16 +93,16 @@ func GetGameState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse query parameters
-	gameIDStr := r.URL.Query().Get("game_id")
+	gameIDStr := r.URL.Query().Get("gameID")
 	if gameIDStr == "" {
-		writeError(w, http.StatusBadRequest, "Missing game_id parameter")
+		writeError(w, http.StatusBadRequest, "Missing gameID parameter")
 		return
 	}
 
 	// Convert gameID to uint
 	gameID, err := strconv.ParseUint(gameIDStr, 10, 32)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid game_id parameter: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Invalid gameID parameter: "+err.Error())
 		return
 	}
 
