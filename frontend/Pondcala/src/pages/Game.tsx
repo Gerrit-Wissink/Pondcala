@@ -60,11 +60,10 @@ export default function Game() {
 
     // Sync displayedScore with yourScore when score changes from non-animated sources
     useEffect(() => {
-        // Only update displayedScore if it's significantly different (not during animation)
-        if (Math.abs(displayedScore - yourScore) <= 1) {
-            setDisplayedScore(yourScore);
-        }
-    }, [yourScore, displayedScore]);
+        // Update displayedScore to match yourScore
+        // If the difference is large, it means state was updated from server, so sync immediately
+        setDisplayedScore(yourScore);
+    }, [yourScore]);
 
     useEffect(() => {
         document.title = "Pondcala Game";
