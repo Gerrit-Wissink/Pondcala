@@ -453,17 +453,21 @@ func (h *ChatHub) Run() {
 							log.Printf("Error fetching game for end game: %v", err)
 						} else {
 							var winnerID uint
+							var loserID uint
 							if finalHostScore > finalOpponentScore {
 								winnerID = game.HostID
+								loserID = game.OpponentID
 							} else if finalOpponentScore > finalHostScore {
 								winnerID = game.OpponentID
+								loserID = game.HostID
 							} else {
 								// Tie - could set to 0 or handle differently
 								winnerID = 0
+								loserID = 0
 							}
 
-							// Update game winner in database
-							if err := business.HandleGameEnd(gameTurn.GameID, gameTurn.TurnTaker, game.OpponentID, "win"); err != nil {
+							// Update game winner in database with the actual winner based on score
+							if err := business.HandleGameEnd(gameTurn.GameID, winnerID, loserID, "win"); err != nil {
 								log.Printf("Error updating game winner: %v", err)
 							}
 
