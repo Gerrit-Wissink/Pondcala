@@ -42,15 +42,14 @@ func FetchWhoseTurnItIs(gameID uint) (uint, error) {
 }
 
 func FetchGameStateByID(gameID uint) (interface{}, error) {
-	// Placeholder for future implementation
-	//Need to check if the game exists and if the game is still going
+	// Check if the game exists
 	if gameExists, err := CheckGameExists(gameID); err != nil || !gameExists {
 		return nil, err
 	}
 
-	if gameEnded, err := CheckGameHasEnded(gameID); err != nil || gameEnded {
-		return nil, err
-	}
+	// Don't block fetching game state if game has ended - we still need to show final state
+	// The frontend will handle displaying the game over modal based on the Winner field
+
 	//Need to get Whose turn it is, pond states, scores, last two turns
 	whoseTurn, err := dbmethods.FetchWhoseTurnItIs(gameID)
 	if err != nil {
