@@ -164,6 +164,17 @@ export default function Lobby() {
         };
     }, []);
 
+    function handleLogout() {
+        // Clear session token from cookie
+        document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        
+        // Clear local storage
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        
+        // Redirect to login page
+        window.location.href = "/#/login";
+    }
 
     const lobby = (
         <>
@@ -171,6 +182,7 @@ export default function Lobby() {
             <div style={{display: 'flex', flexDirection: 'row', gap: '20px'}}>
                 <button onClick={() => setShowHostGame(true)}>Host a Game</button>
                 <button onClick={() => setShowFindGame(true)}>Find a Game</button>
+                <button onClick={handleLogout} style={{backgroundColor: '#dc3545', color: 'white'}}>Logout</button>
             </div>
         </>
     );
