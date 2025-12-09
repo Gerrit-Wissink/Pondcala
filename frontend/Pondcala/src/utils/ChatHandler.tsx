@@ -21,6 +21,7 @@ function displayLobbyMessage(messageText: string, author: string, timestamp: str
 
 function displayGameChatMessage(messageText: string, author: string, timestamp: string, gameID: string): void {
     // TODO: Implement game chat message display
+    console.log(`Displaying game chat message for gameID ${gameID}: ${messageText} from author ${author} at ${timestamp}`);
     const chatContent = document.getElementById(`game-${gameID}-chat-content`);
     if(!chatContent) return;
     
@@ -107,7 +108,7 @@ function sendGameChatMessage(gameID: number, authorID: number, players: number[]
         time: new Date().toISOString(),
         type: "game-msg",
         author: authorID,
-        game_id: gameID,
+        gameID: gameID,
         players: players
     };
 

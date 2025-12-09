@@ -4,7 +4,7 @@ import apiClient from "../utils/apiClient";
 import { sendGameChatMessage, sendLobbyChatMessage } from "../utils/ChatHandler";
 import {useState, useEffect, useRef} from "react";
 
-export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
+export default function Chat({type, gameID, players}: {type?: string, gameID?: number, players?: number[]}) {
     
     const [messages, setMessages] = useState<any[]>([]);
     const chatContentRef = useRef<HTMLDivElement>(null);
@@ -39,7 +39,8 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
 
         const handleGameMessage = (event: any) => {
             const msg = event.detail;
-            if (type === "game" && msg.gameID === gameID) {
+            console.log('Game message received:', msg, 'Current gameID:', gameID, 'Match:', msg.gameID == gameID);
+            if (type === "game" && msg.gameID == gameID) {
                 setMessages((prev: any) => [...prev, {
                     id: Date.now(),
                     message: msg.message,
@@ -80,7 +81,7 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
         if (type === "lobby") {
             sendLobbyChatMessage(currentUser ? currentUser.id : 0);
         } else if (type === "game") {
-            sendGameChatMessage(gameID ? gameID : 0, currentUser ? currentUser.id : 0, []);
+            sendGameChatMessage(gameID ? gameID : 0, currentUser ? currentUser.id : 0, players || []);
         }
     }
 
@@ -120,7 +121,7 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     const chatHeaderStyle: React.CSSProperties = {
         marginTop: 0,
         marginBottom: '1em',
-        color: '#222',
+        color: type === "lobby" ? '#222' : '#fff',
         fontSize: '1.2rem',
         borderBottom: `0.2em solid ${primaryColor}`,
         paddingBottom: '0.5em',
@@ -172,7 +173,7 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     return (
         <>
             <aside style={chatSidebarStyle}>
-                <h2 style={chatHeaderStyle}>Lobby Chat</h2>
+                <h2 style={chatHeaderStyle}>{type === "game" ? "Game Chat" : "Lobby Chat"}</h2>
                 <div id={`${idPrefix}-chat-content`} ref={chatContentRef} style={chatContentStyle}>
                     {/* <!-- Chat messages will appear here --> */}
                     {messages.map((msg: any) => (

@@ -15,41 +15,19 @@ func ProcessTurn(gameID uint, userID uint, selectedIndex int, hostPonds []int, o
 		return nil, fmt.Errorf("failed to fetch game: %w", err)
 	}
 
-	// Determine if user is host or opponent
-	isHost := userID == game.HostID
-
-	// Fetch the other player's score from the previous turn
-	// The other player's score is guaranteed to remain unaffected
-	var hostScore, opponentScore int
 	lastTurns, err := dbmethods.FetchLastTwoTurns(gameID)
-	if err == nil && len(lastTurns) > 0 {
-		// Get the most recent turn's scores
-		if isHost {
-			hostScore = userScore
-			opponentScore = lastTurns[0].OpponentScore
-		} else {
-			hostScore = lastTurns[0].HostScore
-			opponentScore = userScore
-		}
-	} else {
-		// First turn - both scores start at 0
-		if isHost {
-			hostScore = userScore
-			opponentScore = 0
-		} else {
-			hostScore = 0
-			opponentScore = userScore
-		}
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch last turns: %w", err)
 	}
 
-	// Validate the turn
-	validTurn := ValidateTurn(gameID, userID, selectedIndex, hostPonds, opponentPonds, hostScore, opponentScore)
-	if validTurn != nil {
-		return nil, validTurn
+	// Simulate the turn server-side to calculate the new board state
+	newHostPonds, newOpponentPonds, newHostScore, newOpponentScore, err := SimulateTurn(*game, userID, selectedIndex, lastTurns)
+	if err != nil {
+		return nil, fmt.Errorf("invalid turn: %w", err)
 	}
 
-	// Save the turn
-	turn, err := dbmethods.TakeTurn(gameID, userID, selectedIndex, hostPonds, opponentPonds, hostScore, opponentScore)
+	// Save the turn with the server-calculated state
+	turn, err := dbmethods.TakeTurn(gameID, userID, selectedIndex, newHostPonds, newOpponentPonds, newHostScore, newOpponentScore)
 	if err != nil {
 		return nil, err
 	}

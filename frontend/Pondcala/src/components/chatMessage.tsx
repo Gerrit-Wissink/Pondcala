@@ -46,7 +46,7 @@ export default function ChatMessage({authorID, message, timestamp}: {authorID: s
 
     return (
         <div style={chatMessageStyle}>
-            <strong>{username}:</strong> <span style={messageTextStyle}>{decodedMessage}</span> <em style={messageTimeStyle}>({timestamp})</em>
+            <strong style={{color: 'black'}}>{username}:</strong> <span style={messageTextStyle}>{decodedMessage}</span> <em style={messageTimeStyle}>({timestamp})</em>
         </div>
     );
 }

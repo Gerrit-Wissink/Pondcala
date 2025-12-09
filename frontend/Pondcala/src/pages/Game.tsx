@@ -761,7 +761,7 @@ export default function Game() {
             </div>
             <LargePond ref={rightLargeRef} score={displayedScore} />
         </div>
-        <Chat type="game" />
+        <Chat type="game" gameID={gameID ? parseInt(gameID) : undefined} players={players} />
 
         {/* Overlay animator (absolute) */}
         {animPath && (
