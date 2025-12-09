@@ -52,8 +52,13 @@ function sendLobbyChatMessage(authorID: number): void {
     const messageText = messageInput.value.trim();
     const ws = getWebSocket();
     
-    if(!messageText || !ws || ws.readyState !== WebSocket.OPEN) {
-        console.log(`Message cannot be sent`);
+    if(!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log(`Message cannot be sent because WebSocket is not open`);
+        return;
+    }
+    
+    if(!messageText) {
+        console.log(`Message cannot be sent because message text is empty`);
         return;
     }
 

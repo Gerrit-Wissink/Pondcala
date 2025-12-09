@@ -63,8 +63,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Name:     "session_token",
 		Value:    token,
 		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
+		HttpOnly: false, // Allow JavaScript to read the cookie
+		Secure:   false, // Set to true in production with HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Expires:  expiresAt,
 	})

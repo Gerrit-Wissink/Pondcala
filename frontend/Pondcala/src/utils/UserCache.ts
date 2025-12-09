@@ -10,10 +10,14 @@ export async function getUsername(userId: number): Promise<string> {
     
     // Fetch from API if not cached
     try {
-        const response = await fetch(`/api/users/${userId}`);
-        const user = await response.json();
-        userCache.set(userId, user);
-        return user.username || `User ${userId}`;
+        const response = await fetch(`/api/users/get?id=${userId}`);
+        const data = await response.json();
+        const user = data.user; // Extract user from response
+        if (user) {
+            userCache.set(userId, user);
+            return user.username || `User ${userId}`;
+        }
+        return `User ${userId}`;
     } catch (error) {
         console.error(`Failed to fetch user ${userId}:`, error);
         return `User ${userId}`;

@@ -6,20 +6,25 @@ function connectWebSocket(): void {
     const protocol = window.location.protocol === `https:` ? `wss:` : `ws:`;
     const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
     
+    console.log("Connecting to WebSocket at:", wsUrl);
+    
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-        console.log(`Websocket connected`);
+        console.log(`Websocket connected successfully to ${wsUrl}`);
+        console.log(`WebSocket readyState:`, ws?.readyState);
     };
 
     ws.onerror = (error) => {
-        console.log(`Websocket error: `, error);
+        console.error(`Websocket error: `, error);
+        console.log(`WebSocket readyState after error:`, ws?.readyState);
     };
 
     ws.onclose = () => {
         console.log(`Websocket disconnected`);
+        console.log(`WebSocket readyState:`, ws?.readyState);
 
-        console.log(`Attemmpting to reconnect...`);
+        console.log(`Attempting to reconnect...`);
 
         connectWebSocket();
     };

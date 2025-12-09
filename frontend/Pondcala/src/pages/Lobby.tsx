@@ -30,12 +30,23 @@ export default function Lobby() {
     }, []);
 
     useEffect(() => {
+        console.log("WebSocket initialization useEffect triggered");
         const token = getCookie("session_token");
+        console.log("Session token:", token ? "Found" : "Not found");
+        
         if (token && token.length > 0) {
             const existingWs = getWebSocket();
+            console.log("Existing WebSocket:", existingWs);
+            console.log("WebSocket readyState:", existingWs?.readyState);
+            
             if (!existingWs || existingWs.readyState === WebSocket.CLOSED) {
+                console.log("Attempting to connect WebSocket...");
                 connectWebSocket();
+            } else {
+                console.log("WebSocket already connected, state:", existingWs.readyState);
             }
+        } else {
+            console.log("No session token, skipping WebSocket connection");
         }
     }, []);
 
