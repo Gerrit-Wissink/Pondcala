@@ -63,8 +63,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Name:     "session_token",
 		Value:    token,
 		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
+		HttpOnly: false,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  expiresAt,
 	})
