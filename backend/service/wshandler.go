@@ -181,6 +181,11 @@ func (h *ChatHub) Run() {
 		case inc := <-h.broadcast:
 			// Route based on message type.
 			switch inc.Type {
+			case "ping":
+				// Ping message to keep connection alive - no need to broadcast or respond
+				log.Println("Received ping from client")
+				continue
+
 			case "invite":
 				// Invitations: when status == "sent" treat as creation and forward to recipient only.
 				// For status updates (accepted/declined/timeout) broadcast to both sender and recipient.

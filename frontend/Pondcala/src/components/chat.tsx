@@ -6,7 +6,7 @@ import {useState, useEffect} from "react";
 
 export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState<any[]>([]);
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
 
     const fetchMessages = async () => {
@@ -23,15 +23,47 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     useEffect(() => {
         fetchMessages();
 
+        // Listen for WebSocket messages and add them to state
+        const handleLobbyMessage = (event: any) => {
+            const msg = event.detail;
+            if (type === "lobby") {
+                setMessages((prev: any) => [...prev, {
+                    id: Date.now(), // Temporary ID for new messages
+                    message: msg.message,
+                    author: msg.author,
+                    timestamp: msg.time
+                }]);
+            }
+        };
+
+        const handleGameMessage = (event: any) => {
+            const msg = event.detail;
+            if (type === "game" && msg.gameID === gameID) {
+                setMessages((prev: any) => [...prev, {
+                    id: Date.now(),
+                    message: msg.message,
+                    author: msg.author,
+                    timestamp: msg.time
+                }]);
+            }
+        };
+
         // Listen for WebSocket reconnection and reload messages
         const handleReconnect = () => {
             console.log("WebSocket reconnected, reloading chat messages...");
             fetchMessages();
         };
 
+        if (type === "lobby") {
+            window.addEventListener('lobby-message-received', handleLobbyMessage);
+        } else if (type === "game") {
+            window.addEventListener('game-message-received', handleGameMessage);
+        }
         window.addEventListener('websocket-reconnected', handleReconnect);
 
         return () => {
+            window.removeEventListener('lobby-message-received', handleLobbyMessage);
+            window.removeEventListener('game-message-received', handleGameMessage);
             window.removeEventListener('websocket-reconnected', handleReconnect);
         };
     }, [type, gameID])

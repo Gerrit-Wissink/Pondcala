@@ -1,9 +1,9 @@
-import { displayLobbyMessage, displayGameChatMessage } from "./ChatHandler";
-
 let ws: WebSocket | null = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000; // 3 seconds
+let pingInterval: ReturnType<typeof setInterval> | null = null;
+const PING_INTERVAL = 25000; // 25 seconds (before the 30 second timeout)
 
 function connectWebSocket(): void {
     const protocol = window.location.protocol === `https:` ? `wss:` : `ws:`;
@@ -18,6 +18,9 @@ function connectWebSocket(): void {
         console.log(`WebSocket readyState:`, ws?.readyState);
         reconnectAttempts = 0; // Reset reconnect attempts on successful connection
         
+        // Start ping interval to keep connection alive
+        startPingInterval();
+        
         // Dispatch event so UI can reload messages and clear duplicates
         window.dispatchEvent(new CustomEvent('websocket-reconnected'));
     };
@@ -30,6 +33,9 @@ function connectWebSocket(): void {
     ws.onclose = () => {
         console.log(`Websocket disconnected`);
         console.log(`WebSocket readyState:`, ws?.readyState);
+        
+        // Stop ping interval
+        stopPingInterval();
 
         // Attempt to reconnect with exponential backoff
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -72,28 +78,14 @@ function handleMessage(message: any): void {
                     Author  uint   `json:"author"`
                 }
             */
-            if (typeof displayLobbyMessage === 'function') {
-                const messageText = message.message;
-                const author = String(message.author || 'Unknown');
-                const timestamp = message.time;
-                displayLobbyMessage(messageText, author, timestamp);
-            } else {
-                console.log('lobby-msg', message);
-            }
+            // Dispatch event for React components to handle
+            window.dispatchEvent(new CustomEvent('lobby-message-received', { detail: message }));
             break;
 
         case 'game-msg':
             // game chat targeted to players
-            if (typeof displayGameChatMessage === 'function') {
-                const messageText = message.message;
-                const author = String(message.author || 'Unknown');
-                const timestamp = message.time;
-                const gameID = message.gameID;
-                displayGameChatMessage(messageText, author, timestamp, gameID);
-            } else {
-                console.log('game-msg', message);
-            }
-            // window.dispatchEvent(new CustomEvent('game-msg', { detail: message }));
+            // Dispatch event for React components to handle
+            window.dispatchEvent(new CustomEvent('game-message-received', { detail: message }));
             break;
 
         case 'game-turn':
@@ -130,6 +122,26 @@ function handleMessage(message: any): void {
             // Unknown types: surface for debugging and let other code inspect
             console.debug('Unhandled WS message type:', t, message);
             window.dispatchEvent(new CustomEvent('ws-message', { detail: message }));
+    }
+}
+
+function startPingInterval(): void {
+    // Clear any existing interval
+    stopPingInterval();
+    
+    // Send a ping every 25 seconds to keep connection alive
+    pingInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            console.log('Sending ping to keep connection alive');
+            ws.send(JSON.stringify({ type: 'ping' }));
+        }
+    }, PING_INTERVAL);
+}
+
+function stopPingInterval(): void {
+    if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
     }
 }
 
