@@ -74,6 +74,10 @@ func FetchLastTwoTurns(gameID uint) ([]models.GameTurn, error) {
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch game turns: %w", result.Error)
 	}
+	// Reverse the slice so index 0 is the older turn and index 1 is the newer turn
+	for i, j := 0, len(turns)-1; i < j; i, j = i+1, j-1 {
+		turns[i], turns[j] = turns[j], turns[i]
+	}
 	return turns, nil
 }
 

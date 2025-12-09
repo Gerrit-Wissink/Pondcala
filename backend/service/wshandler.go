@@ -77,7 +77,7 @@ type IncomingMessage struct {
 	Players  []uint `json:"players,omitempty"`
 
 	// game-turn specific fields
-	GameID        uint  `json:"gameId,omitempty"`
+	GameID        uint  `json:"gameID,omitempty"`
 	TurnTaker     uint  `json:"turnTaker,omitempty"`
 	SelectedIndex int   `json:"selectedIndex,omitempty"`
 	HostPools     []int `json:"hostPools,omitempty"`
