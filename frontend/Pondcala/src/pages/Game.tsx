@@ -119,8 +119,15 @@ export default function Game() {
             
             try {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
+                console.log("Full API response:", result);
+                console.log("Response data:", result.data);
                 const gameState = result.data.game_state;
                 console.log("Fetched game state:", gameState);
+                if (!gameState) {
+                    console.error("Game state is undefined! Full response:", result.data);
+                    alert("Failed to load game state");
+                    return;
+                }
                 if (!currentUser || !currentUser.id || currentUser.id !== gameState.Host.id && currentUser.id !== gameState.Opponent.id) {
                     alert("You are not a participant in this game.");
                     window.location.href = "/#/lobby";
