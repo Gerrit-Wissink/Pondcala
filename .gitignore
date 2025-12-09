@@ -1,0 +1,17 @@
+# Backend static build files
+backend/static/
+
+# Go binaries
+backend/backend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test files
+*.test
+*.out
+
+# Go dependency directories
+vendor/

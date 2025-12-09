@@ -147,7 +147,6 @@ export default function Game() {
                     setCounts(isHostPlayer ? prevTurn.host_ponds : prevTurn.opponent_ponds);
                     setOpponentCounts(isHostPlayer ? prevTurn.opponent_ponds : prevTurn.host_ponds);
                     setYourScore(isHostPlayer ? prevTurn.host_score : prevTurn.opponent_score);
-                    setTurnTaker(prevTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber - 1)
 
@@ -168,7 +167,6 @@ export default function Game() {
                         setCounts(isHostPlayer ? lastTurn.host_ponds : lastTurn.opponent_ponds);
                         setOpponentCounts(isHostPlayer ? lastTurn.opponent_ponds : lastTurn.host_ponds);
                         setYourScore(isHostPlayer ? lastTurn.host_score : lastTurn.opponent_score);
-                        setTurnTaker(lastTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                         setWhoseTurnID(gameState.WhoseTurn);
                         setTurnCounter(gameState.TurnNumber);
                     }, 100);
@@ -177,10 +175,6 @@ export default function Game() {
                     setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
                     setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
                     setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
-                    const latestTurn = gameState.LastTwoTurns && gameState.LastTwoTurns.length > 0 ? gameState.LastTwoTurns[0] : null;
-                    if (latestTurn) {
-                        setTurnTaker(latestTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
-                    }
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber);
                 }
@@ -255,7 +249,6 @@ export default function Game() {
             try {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;
-                setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                 setWhoseTurnID(gameState.WhoseTurn);
             } catch (error) {
                 console.error("Error fetching game state for turn:", error);
@@ -720,10 +713,10 @@ export default function Game() {
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
-        // In Mancala, stones ALWAYS go into opponent ponds right-to-left (5->4->3)
-        // This is true whether YOU are making the move or you're watching THEM
+        // When YOU move: stones go into opponent ponds right-to-left (5->4->3)
+        // When OPPONENT moves: stones go into YOUR ponds left-to-right (0->1->2)
         for (let i = 0; i < fishCount && i < len; i++) {
-            const actualIndex = len - 1 - i;
+            const actualIndex = animateAsYourTurn ? (len - 1 - i) : i;
             
             setOpponentHighlighted(actualIndex);
 
@@ -731,8 +724,8 @@ export default function Game() {
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                // Previous pond in the right-to-left sequence
-                const prevIndex = actualIndex + 1;
+                // Previous pond in sequence
+                const prevIndex = animateAsYourTurn ? (actualIndex + 1) : (actualIndex - 1);
                 sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
@@ -800,7 +793,7 @@ export default function Game() {
         <div style = {{display: 'grid', gap: '0vw', gridTemplateColumns: '1fr 3fr 1fr'}}>
             <LargePond ref={leftLargeRef} score={null} />
             <div style = {{display: 'flex', gap: '5vw', flexDirection: 'column', flex: '1'}}>
-            <OpponentPondRow counts={opponentCounts} highlightedIndex={opHighlighted} pondRefs={opponentPondRefs} />
+            <OpponentPondRow counts={[...opponentCounts].reverse()} highlightedIndex={opHighlighted !== null ? 5 - opHighlighted : null} pondRefs={opponentPondRefs} />
             <YourPondRow 
                 counts={counts} 
                 highlightedIndex={yourHighlighted}

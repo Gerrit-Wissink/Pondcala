@@ -46,6 +46,7 @@ export default function SettingsMenuModal({open, setOpen, playing, handleForfeit
                 {/* Forfeit Button if on game screen*/}
                 {playing && handleForfeit  !== null && <button onClick={() => {
                     console.log("Forfeiting game...");
+                    handleForfeit();
                     // Add forfeit logic here
                 }}>
                     Forfeit Game
