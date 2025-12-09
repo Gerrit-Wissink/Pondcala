@@ -9,7 +9,7 @@ import (
 
 func Login(username string, hashedPassword string) (*models.User, error) {
 	var user models.User
-	result := DB.Where("username = ?", username).First(&user)
+	result := DB.Where(`"username" = ?`, username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -34,7 +34,7 @@ func CreateSession(tokenHash string, userID uint, expiresAt time.Time) (*models.
 
 func VerifySession(tokenHash string) (*models.Session, error) {
 	var session models.Session
-	result := DB.Where("tokenHash = ?", tokenHash).First(&session)
+	result := DB.Where(`"tokenHash" = ?`, tokenHash).First(&session)
 	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, fmt.Errorf("failed to verify session: %w", result.Error)
 	}
@@ -74,7 +74,7 @@ func GetUser(id uint) (*models.User, error) {
 
 func GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
-	result := DB.Where("username = ?", username).First(&user)
+	result := DB.Where(`"username" = ?`, username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -83,7 +83,7 @@ func GetUserByUsername(username string) (*models.User, error) {
 
 func GetUserByTokenHash(tokenHash string) (*models.User, error) {
 	var session models.Session
-	result := DB.Where("tokenHash = ?", tokenHash).First(&session)
+	result := DB.Where(`"tokenHash" = ?`, tokenHash).First(&session)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to find session: %w", result.Error)
 	}
@@ -108,7 +108,7 @@ func GetAllUsers() ([]models.User, error) {
 
 func GetAllUsersOnline() ([]models.User, error) {
 	var users []models.User
-	result := DB.Where("isOnline = ?", true).Find(&users)
+	result := DB.Where(`"isOnline" = ?`, true).Find(&users)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -138,7 +138,7 @@ func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
 	var userStats models.UserStats
 
 	// First, check if user stats exist
-	result := DB.Where("userID = ?", id).First(&userStats)
+	result := DB.Where(`"userID" = ?`, id).First(&userStats)
 
 	if result.Error != nil {
 		return fmt.Errorf("failed to update user stats: %w", result.Error)
@@ -171,7 +171,7 @@ func GetUserStats(id uint) (*models.UserStats, error) {
 	var userStats models.UserStats
 
 	// First, check if user stats exist
-	result := DB.Where("userID = ?", id).First(&userStats)
+	result := DB.Where(`"userID" = ?`, id).First(&userStats)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get user stats: %w", result.Error)
@@ -233,7 +233,7 @@ func HardDeleteUser(id uint) error {
 
 // UpdateUserPassword updates only the user's password (with proper hashing)
 func UpdateUserPassword(id uint, hashedPassword string) error {
-	result := DB.Model(&models.User{}).Where("id = ?", id).Update("password", hashedPassword)
+	result := DB.Model(&models.User{}).Where(`"id" = ?`, id).Update("password", hashedPassword)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update password: %w", result.Error)
 	}
@@ -247,7 +247,7 @@ func UpdateUserPassword(id uint, hashedPassword string) error {
 
 // UpdateUserOnlineStatus updates the user's online status
 func UpdateUserOnlineStatus(id uint, isOnline bool) error {
-	result := DB.Model(&models.User{}).Where("id = ?", id).Update("isOnline", isOnline)
+	result := DB.Model(&models.User{}).Where(`"id" = ?`, id).Update("isOnline", isOnline)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update online status: %w", result.Error)
 	}
