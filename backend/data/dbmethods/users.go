@@ -137,29 +137,30 @@ func UpdateUser(id uint, updates map[string]interface{}) (*models.User, error) {
 func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
 	var userStats models.UserStats
 
-	// First, check if user stats exist
-	result := DB.Where(`"userID" = ?`, id).First(&userStats)
+	// First, try to find existing stats or create new one
+	result := DB.Where(`"userID" = ?`, id).FirstOrCreate(&userStats, models.UserStats{
+		UserID:      id,
+		NumWins:     0,
+		NumLoss:     0,
+		GamesPlayed: 0,
+		HighScore:   0,
+	})
 
 	if result.Error != nil {
-		return fmt.Errorf("failed to update user stats: %w", result.Error)
+		return fmt.Errorf("failed to find or create user stats: %w", result.Error)
 	}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("user with id %d not found", id)
-	}
+	// Update stats
+	userStats.NumWins += winsDelta
+	userStats.NumLoss += lossesDelta
+	userStats.GamesPlayed += winsDelta + lossesDelta
 
-	//Check if high score needs to be updated
+	// Check if high score needs to be updated
 	if score > userStats.HighScore {
 		userStats.HighScore = score
 	}
 
-	//If found, update numWins, numLossess, and gamesPlayed
-	if result.Error == nil {
-		userStats.NumWins += winsDelta
-		userStats.NumLoss += lossesDelta
-		userStats.GamesPlayed += winsDelta + lossesDelta
-	}
-
+	// Save the updated stats
 	result = DB.Save(&userStats)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update user stats: %w", result.Error)
@@ -170,15 +171,17 @@ func UpdateUserStats(id uint, winsDelta, lossesDelta, score int) error {
 func GetUserStats(id uint) (*models.UserStats, error) {
 	var userStats models.UserStats
 
-	// First, check if user stats exist
-	result := DB.Where(`"userID" = ?`, id).First(&userStats)
+	// Try to find existing stats or create new one
+	result := DB.Where(`"userID" = ?`, id).FirstOrCreate(&userStats, models.UserStats{
+		UserID:      id,
+		NumWins:     0,
+		NumLoss:     0,
+		GamesPlayed: 0,
+		HighScore:   0,
+	})
 
 	if result.Error != nil {
-		return nil, fmt.Errorf("failed to get user stats: %w", result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("user stats for user id %d not found", id)
+		return nil, fmt.Errorf("failed to get or create user stats: %w", result.Error)
 	}
 
 	return &userStats, nil
