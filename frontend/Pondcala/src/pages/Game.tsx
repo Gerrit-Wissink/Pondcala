@@ -720,10 +720,12 @@ export default function Game() {
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
-        // When YOU move: stones go into opponent ponds right-to-left (5->4->3)
-        // When OPPONENT moves: stones go into YOUR ponds left-to-right (0->1->2)
+        // Backend always adds to opponent ponds in order: 0->1->2->3->4->5
+        // The display is mirrored, so backend index 0 appears at visual position 5
+        // When animating, always use actual backend index (i)
+        // The mirroring in OpponentPondRow will make it look correct visually
         for (let i = 0; i < fishCount && i < len; i++) {
-            const actualIndex = animateAsYourTurn ? (len - 1 - i) : i;
+            const actualIndex = i;
             
             setOpponentHighlighted(actualIndex);
 
@@ -731,8 +733,8 @@ export default function Game() {
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                // Previous pond in sequence
-                const prevIndex = animateAsYourTurn ? (actualIndex + 1) : (actualIndex - 1);
+                // Previous pond in sequence (always i-1 since we increment)
+                const prevIndex = actualIndex - 1;
                 sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
