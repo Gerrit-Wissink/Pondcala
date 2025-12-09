@@ -585,7 +585,8 @@ export default function Game() {
                     remainingFish,
                     playerPondRefs,
                     setPlayerHighlighted,
-                    setPlayerCounts
+                    setPlayerCounts,
+                    !animateAsYourTurn && setPlayerHighlighted === setOpHighlighted // Mirror if opponent's turn and highlighting opponent ponds
                 );
                 remainingFish--;
                 lastSourceIndex = currentIndex;
@@ -696,14 +697,18 @@ export default function Game() {
         currentFishRemaining: number,
         pondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
         setHighlighted: (index: number | null) => void,
-        setCounts: React.Dispatch<React.SetStateAction<number[]>>
+        setCounts: React.Dispatch<React.SetStateAction<number[]>>,
+        shouldMirrorHighlight: boolean = false
     ): Promise<void> {
         return new Promise((resolve) => {
             const fromEl = (prevIndex >= 0) ? pondRefs.current[prevIndex] : null;
             const toEl = (index >= 0) ? pondRefs.current[index] : null;
             triggerAnimate(fromEl ?? null, toEl ?? null, currentFishRemaining);
 
-            setHighlighted(index);
+            // If highlighting opponent ponds during opponent's turn, invert the index
+            // to counteract the JSX mirroring (5 - x)
+            const highlightIndex = shouldMirrorHighlight ? (5 - index) : index;
+            setHighlighted(highlightIndex);
 
             setTimeout(() => {
                 setCounts(prev => {
