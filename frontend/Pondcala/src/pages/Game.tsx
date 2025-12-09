@@ -23,7 +23,13 @@ export default function Game() {
     const [isAnimating, setIsAnimating] = useState(false);
     const [animPath, setAnimPath] = useState<null | {points: {x:number,y:number}[], id: number}>(null);
     const [gameID] = useState<string | null>(() => {
-        const params = new URLSearchParams(window.location.search);
+        // For hash routing, query params are in the hash, not window.location.search
+        const hash = window.location.hash; // e.g., "#/game?gameID=1"
+        const queryStart = hash.indexOf('?');
+        if (queryStart === -1) return null;
+        
+        const queryString = hash.substring(queryStart);
+        const params = new URLSearchParams(queryString);
         return params.get("gameID") ?? params.get("gameId") ?? params.get("id");
     });
     const [turnTaker, setTurnTaker] = useState<string | null>(null);
@@ -102,6 +108,13 @@ export default function Game() {
     useEffect(() => {
          async function fetchGameState() {
             // Placeholder for fetching game state from server
+            if (!gameID) {
+                console.error("No gameID found in URL");
+                alert("Invalid game ID");
+                window.location.href = "/#/lobby";
+                return;
+            }
+            
             try {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;
@@ -212,6 +225,11 @@ export default function Game() {
         };
 
         const fetchGameStateForTurn = async () => {
+            if (!gameID) {
+                console.error("No gameID available for fetching game state");
+                return;
+            }
+            
             try {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;

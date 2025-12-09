@@ -1,6 +1,6 @@
 
 
-export default function ActiveGames({games}: {games: Array<{id: number, Host: {username: string}, Opponent: {username: string}}>} ) {
+export default function ActiveGames({games}: {games: Array<{id: number, host: {username: string}, opponent: {username: string}}>} ) {
 
     function handleJoinGame(gameID: number) {
         // Implement join game logic here
@@ -32,7 +32,7 @@ export default function ActiveGames({games}: {games: Array<{id: number, Host: {u
                         }}
                         onClick={() => handleJoinGame(game.id)}
                     >
-                        Game ID: {game.id}, Host: {game.Host ? game.Host.username ? game.Host.username : "" : ""}, Opponent: {game.Opponent ? game.Opponent.username ? game.Opponent.username : "" : ""}
+                        Game ID: {game.id}, Host: {game.host?.username || "Unknown"}, Opponent: {game.opponent?.username || "Unknown"}
                     </li>
                 ))}
             </ul>

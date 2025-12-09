@@ -84,6 +84,16 @@ export default function Lobby() {
                     return;
                 }
                 
+                // Check if sender is already in an active game
+                const senderInActiveGame = activeGames.some((game: any) => 
+                    game.host?.id === invite.sender || game.opponent?.id === invite.sender
+                );
+                
+                if (senderInActiveGame) {
+                    console.log(`Ignoring invite from user ${invite.sender} - already in an active game`);
+                    return;
+                }
+                
                 // Filter out duplicates based on sender
                 setInvitations((prevInvitations) => {
                     const isDuplicate = prevInvitations.some(
@@ -104,7 +114,7 @@ export default function Lobby() {
         return () => {
             window.removeEventListener('invite-received', handleInviteReceived);
         };
-    }, [currentUser]);
+    }, [currentUser, activeGames]);
 
     useEffect(() => {
         const handleInviteUpdated = (event: Event) => {
