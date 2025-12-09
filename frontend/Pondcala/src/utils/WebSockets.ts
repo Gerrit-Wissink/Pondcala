@@ -1,6 +1,9 @@
 import { displayLobbyMessage, displayGameChatMessage } from "./ChatHandler";
 
 let ws: WebSocket | null = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 3000; // 3 seconds
 
 function connectWebSocket(): void {
     const protocol = window.location.protocol === `https:` ? `wss:` : `ws:`;
@@ -13,6 +16,10 @@ function connectWebSocket(): void {
     ws.onopen = () => {
         console.log(`Websocket connected successfully to ${wsUrl}`);
         console.log(`WebSocket readyState:`, ws?.readyState);
+        reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+        
+        // Dispatch event so UI can reload messages and clear duplicates
+        window.dispatchEvent(new CustomEvent('websocket-reconnected'));
     };
 
     ws.onerror = (error) => {
@@ -24,9 +31,18 @@ function connectWebSocket(): void {
         console.log(`Websocket disconnected`);
         console.log(`WebSocket readyState:`, ws?.readyState);
 
-        // Don't auto-reconnect - let user refresh or manually reconnect
-        // Infinite reconnection can cause duplicate messages
-        console.log(`WebSocket closed. Refresh page to reconnect.`);
+        // Attempt to reconnect with exponential backoff
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            const delay = RECONNECT_DELAY * reconnectAttempts;
+            console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+            
+            setTimeout(() => {
+                connectWebSocket();
+            }, delay);
+        } else {
+            console.error('Max reconnection attempts reached. Please refresh the page.');
+        }
     };
 
     ws.onmessage = (event) => {

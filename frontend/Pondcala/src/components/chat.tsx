@@ -9,21 +9,32 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     const [messages, setMessages] = useState([]);
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
 
+    const fetchMessages = async () => {
+        // Fetch initial chat messages from server
+        try {
+            const path = type === "game" && gameID ? "/api/chat/game?gameID=" + gameID : "/api/chat/lobby";
+            const response = await apiClient.get(path);
+            setMessages(response.data.messages || []);
+        } catch (error) {
+            console.error("Error fetching chat messages:", error);
+        }
+    };
+
     useEffect(() => {
-        // Placeholder: Fetch initial chat messages from server
-        const fetchMessages = async () => {
-            // Simulate fetching messages
-            try {
-                const path = type === "game" && gameID ? "/api/chat/game?gameID=" + gameID : "/api/chat/lobby";
-                const response = await apiClient.get(path);
-                setMessages(response.data.messages || []);
-            } catch (error) {
-                console.error("Error fetching chat messages:", error);
-            }
+        fetchMessages();
+
+        // Listen for WebSocket reconnection and reload messages
+        const handleReconnect = () => {
+            console.log("WebSocket reconnected, reloading chat messages...");
+            fetchMessages();
         };
 
-        fetchMessages();
-    }, [])
+        window.addEventListener('websocket-reconnected', handleReconnect);
+
+        return () => {
+            window.removeEventListener('websocket-reconnected', handleReconnect);
+        };
+    }, [type, gameID])
 
     function handleSendButtonClick() {
         if (type === "lobby") {
