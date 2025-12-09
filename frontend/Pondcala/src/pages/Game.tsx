@@ -220,7 +220,7 @@ export default function Game() {
             
             // Update whose turn it is
             if (turnData.whoseTurn) {
-                fetchGameStateForTurn();
+                await fetchGameStateForTurn();
             }
             
             setTurnCounter(prev => prev + 1);
@@ -530,34 +530,43 @@ export default function Game() {
             return temp;
         });
         
+        // When viewing opponent's turn, they've picked their rightmost pond
+        // After mirroring, this appears as index 0, but fish should go directly to their large pond
+        // (they don't have any more ponds to fill on their side)
+        let skipToLargePond = !animateAsYourTurn;
+        
         while (remainingFish > 0) {
             const len = 6; // Always 6 ponds
             
-            // Move fish in player's own ponds
-            while (remainingFish > 0 && currentIndex < len) {
-                await increaseIndexAnimatedGeneric(
-                    lastSourceIndex,
-                    currentIndex,
-                    remainingFish,
-                    playerPondRefs,
-                    setPlayerHighlighted,
-                    setPlayerCounts
-                );
-                remainingFish--;
-                lastSourceIndex = currentIndex;
-                lastPondIndex = currentIndex;
-                lastPondWasPlayerSide = true;
-                currentIndex++;
-                
-                if (remainingFish === 0) break;
+            // Move fish in player's own ponds (skip if viewing opponent's turn - they picked their last pond)
+            if (!skipToLargePond) {
+                while (remainingFish > 0 && currentIndex < len) {
+                    await increaseIndexAnimatedGeneric(
+                        lastSourceIndex,
+                        currentIndex,
+                        remainingFish,
+                        playerPondRefs,
+                        setPlayerHighlighted,
+                        setPlayerCounts
+                    );
+                    remainingFish--;
+                    lastSourceIndex = currentIndex;
+                    lastPondIndex = currentIndex;
+                    lastPondWasPlayerSide = true;
+                    currentIndex++;
+                    
+                    if (remainingFish === 0) break;
+                }
             }
             
             // Hit the edge - add to player's large pond
-            if (currentIndex >= len && remainingFish > 0) {
+            if ((currentIndex >= len || skipToLargePond) && remainingFish > 0) {
                 console.log("Hit the edge - animating to large pond");
                 
                 // Animate to player's large pond
-                const fromEl = playerPondRefs.current[lastSourceIndex];
+                const fromEl = skipToLargePond 
+                    ? playerPondRefs.current[selectedIndex]  // Coming from the selected opponent pond
+                    : playerPondRefs.current[lastSourceIndex];  // Coming from last pond in sequence
                 const toEl = playerLargePond.current;
                 triggerAnimate(fromEl ?? null, toEl ?? null, remainingFish);
                 await new Promise(resolve => setTimeout(resolve, 850));
@@ -594,6 +603,9 @@ export default function Game() {
                     currentIndex = 0;
                     lastSourceIndex = -1;
                 }
+                
+                // Clear skip flag after first iteration
+                skipToLargePond = false;
             }
         }
         
@@ -695,7 +707,8 @@ export default function Game() {
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                const prevIndex = len - i;
+                // Previous pond in the right-to-left sequence: if we're at index 4, prev is 5
+                const prevIndex = actualIndex + 1;
                 sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
@@ -714,7 +727,7 @@ export default function Game() {
             setOpponentHighlighted(null);
         }
         
-        opCountsRef.current = temp.reverse();
+        opCountsRef.current = temp;
         return { remainingFish, lastPondIndex };
     }
 
