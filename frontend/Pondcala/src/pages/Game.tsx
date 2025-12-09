@@ -234,8 +234,10 @@ export default function Game() {
             const prevHostPools = isHost ? [...counts] : [...opponentCounts];
             const prevOpponentPools = isHost ? [...opponentCounts] : [...counts];
             
-            // Update board state from WebSocket message FIRST
-            // (Animation will use the saved previous state)
+            // Animate the turn using the previous state
+            await animateTurn(turnData, isTurnTaker, prevHostPools, prevOpponentPools, hostID);
+            
+            // Update board state from WebSocket message AFTER animation
             if (isHost) {
                 setCounts(turnData.hostPools);
                 setOpponentCounts(turnData.opponentPools);
@@ -245,9 +247,6 @@ export default function Game() {
                 setOpponentCounts(turnData.hostPools);
                 setYourScore(turnData.opponentScore || 0);
             }
-            
-            // Animate the turn using the previous state
-            await animateTurn(turnData, isTurnTaker, prevHostPools, prevOpponentPools, hostID);
             
             // Update whose turn it is
             if (turnData.whoseTurn) {
@@ -742,13 +741,14 @@ export default function Game() {
         for (let i = 0; i < fishCount && i < len; i++) {
             const actualIndex = i;
             
-            // For highlighting: always use backend index (mirroring happens in JSX)
-            setOpponentHighlighted(actualIndex);
-
-            let sourceEl: HTMLElement | SVGElement | null = null;
             // For refs: when animating YOUR turn into opponent ponds, refs are reversed
             // When animating OPPONENT turn into your ponds, refs are not reversed
             const refIndex = animateAsYourTurn ? (len - 1 - i) : i;
+            
+            // For highlighting: use the same index as refs so they match
+            setOpponentHighlighted(refIndex);
+
+            let sourceEl: HTMLElement | SVGElement | null = null;
             
             if (i === 0) {
                 sourceEl = fromEl;
