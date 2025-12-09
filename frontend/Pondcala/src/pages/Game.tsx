@@ -745,8 +745,11 @@ export default function Game() {
             // When animating OPPONENT turn into your ponds, refs are not reversed
             const refIndex = animateAsYourTurn ? (len - 1 - i) : i;
             
-            // For highlighting: use the same index as refs so they match
-            setOpponentHighlighted(refIndex);
+            // For highlighting: 
+            // When YOUR turn: set highlight to backend index (0->1->2), JSX will mirror it to display correctly
+            // When OPPONENT turn: set highlight to ref index (0->1->2), no JSX mirroring
+            const highlightIndex = animateAsYourTurn ? actualIndex : refIndex;
+            setOpponentHighlighted(highlightIndex);
 
             let sourceEl: HTMLElement | SVGElement | null = null;
             
