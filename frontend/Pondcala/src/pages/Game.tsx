@@ -527,9 +527,14 @@ export default function Game() {
     ): Promise<void> {
         console.log("Animating generic:", selectedIndex, fishCount, "asYourTurn:", animateAsYourTurn);
         
-        let currentIndex = selectedIndex + 1;
+        // When viewing opponent's turn, we need to go right-to-left (5->4->3->2->1)
+        // So convert their index 0 to start at 5, index 1 to start at 4, etc.
+        const startIndex = animateAsYourTurn ? selectedIndex : (5 - selectedIndex);
+        const direction = animateAsYourTurn ? 1 : -1; // 1 for increment, -1 for decrement
+        
+        let currentIndex = startIndex + direction;
         let remainingFish = fishCount;
-        let lastSourceIndex = selectedIndex;
+        let lastSourceIndex = startIndex;
         let lastPondIndex = -1;
         let lastPondWasPlayerSide = false;
         
@@ -545,7 +550,7 @@ export default function Game() {
         // Clear the selected pond visually
         setPlayerCounts((prev) => {
             const temp = [...prev];
-            temp[selectedIndex] = 0;
+            temp[startIndex] = 0;
             return temp;
         });
         
@@ -553,7 +558,13 @@ export default function Game() {
             const len = 6; // Always 6 ponds
             
             // Move fish in player's own ponds
-            while (remainingFish > 0 && currentIndex < len) {
+            // For your turn: go 0->1->2->3->4->5 (while currentIndex < len)
+            // For opponent turn: go 5->4->3->2->1->0 (while currentIndex >= 0)
+            const shouldContinueInPonds = animateAsYourTurn 
+                ? (currentIndex < len) 
+                : (currentIndex >= 0);
+            
+            while (remainingFish > 0 && shouldContinueInPonds) {
                 await increaseIndexAnimatedGeneric(
                     lastSourceIndex,
                     currentIndex,
@@ -566,13 +577,20 @@ export default function Game() {
                 lastSourceIndex = currentIndex;
                 lastPondIndex = currentIndex;
                 lastPondWasPlayerSide = true;
-                currentIndex++;
+                currentIndex += direction;
                 
                 if (remainingFish === 0) break;
+                
+                // Update continuation check
+                const stillInPonds = animateAsYourTurn 
+                    ? (currentIndex < len) 
+                    : (currentIndex >= 0);
+                if (!stillInPonds) break;
             }
             
             // Hit the edge - add to player's large pond
-            if (currentIndex >= len && remainingFish > 0) {
+            const hitEdge = animateAsYourTurn ? (currentIndex >= len) : (currentIndex < 0);
+            if (hitEdge && remainingFish > 0) {
                 console.log("Hit the edge - animating to large pond");
                 
                 // Animate to player's large pond
