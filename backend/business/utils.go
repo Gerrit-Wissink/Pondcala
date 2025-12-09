@@ -6,6 +6,7 @@ import (
 	"html"
 	"strings"
 
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 
 	"backend/data/dbmethods"
@@ -170,8 +171,8 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 	} else {
 		// Get the most recent turn (lastTurns is ordered by timestamp desc)
 		lastTurn := lastTurns[0]
-		expectedHostPonds = lastTurn.HostPonds
-		expectedOpponentPonds = lastTurn.OpponentPonds
+		expectedHostPonds = convertInt64SliceToInt(lastTurn.HostPonds)
+		expectedOpponentPonds = convertInt64SliceToInt(lastTurn.OpponentPonds)
 		expectedHostScore = lastTurn.HostScore
 		expectedOpponentScore = lastTurn.OpponentScore
 	}
@@ -309,4 +310,13 @@ func DetermineEndOfGameScores(gameID uint) (hostScore int, opponentScore int, er
 	}
 
 	return hostScore, opponentScore, nil
+}
+
+// Helper function for converting pq.Int64Array to []int
+func convertInt64SliceToInt(slice pq.Int64Array) []int {
+	result := make([]int, len(slice))
+	for i, v := range slice {
+		result[i] = int(v)
+	}
+	return result
 }

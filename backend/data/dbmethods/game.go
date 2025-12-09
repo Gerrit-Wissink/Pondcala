@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"backend/data/models"
+
+	"github.com/lib/pq"
 )
 
 func CreateGame(hostID, opponentID uint) (*models.Game, error) {
@@ -26,8 +28,8 @@ func TakeTurn(gameID, userID uint, selected_index int, host_ponds []int, opponen
 		GameID:        gameID,
 		TurnTaker:     userID,
 		SelectedIndex: selected_index,
-		HostPonds:     host_ponds,
-		OpponentPonds: opponent_ponds,
+		HostPonds:     pq.Int64Array(convertIntSliceToInt64(host_ponds)),
+		OpponentPonds: pq.Int64Array(convertIntSliceToInt64(opponent_ponds)),
 		HostScore:     host_score,
 		OpponentScore: opponent_score,
 		Timestamp:     models.GetCurrentTimestamp(),
@@ -102,9 +104,9 @@ func checkIfPlayerGetsAnotherTurn(gameID uint, lastTurn models.GameTurn, game mo
 	if prevResult.Error == nil {
 		// Get the fish count from the turn before last
 		if isHost {
-			fishCount = turnBeforeLast.HostPonds[lastTurn.SelectedIndex]
+			fishCount = int(turnBeforeLast.HostPonds[lastTurn.SelectedIndex])
 		} else {
-			fishCount = turnBeforeLast.OpponentPonds[lastTurn.SelectedIndex]
+			fishCount = int(turnBeforeLast.OpponentPonds[lastTurn.SelectedIndex])
 		}
 	} else {
 		// This is the first turn, initial ponds all have 4 fish
@@ -156,7 +158,7 @@ func FetchCurrentBoardState(gameID uint) (hostPonds []int, opponentPonds []int, 
 		return nil, nil, 0, 0, fmt.Errorf("failed to fetch last turn: %w", result.Error)
 	}
 
-	return lastTurn.HostPonds, lastTurn.OpponentPonds, lastTurn.HostScore, lastTurn.OpponentScore, nil
+	return convertInt64SliceToInt(lastTurn.HostPonds), convertInt64SliceToInt(lastTurn.OpponentPonds), lastTurn.HostScore, lastTurn.OpponentScore, nil
 }
 
 func GetAllGamesByUserID(userID uint) ([]models.Game, error) {
@@ -193,7 +195,7 @@ func GetPlayers(gameID uint) (host models.User, opponent models.User, err error)
 
 func CreateInitialGameTurn(gameID uint) (*models.GameTurn, error) {
 	// Initialize starting state
-	initialPonds := []int{4, 4, 4, 4, 4, 4}
+	initialPonds := pq.Int64Array{4, 4, 4, 4, 4, 4}
 	initialScore := 0
 
 	turn := &models.GameTurn{
@@ -220,4 +222,21 @@ func UpdateGameWinner(gameID, winnerID uint) error {
 		return fmt.Errorf("failed to update game winner: %w", result.Error)
 	}
 	return nil
+}
+
+// Helper functions for converting between []int and pq.Int64Array
+func convertIntSliceToInt64(slice []int) []int64 {
+	result := make([]int64, len(slice))
+	for i, v := range slice {
+		result[i] = int64(v)
+	}
+	return result
+}
+
+func convertInt64SliceToInt(slice pq.Int64Array) []int {
+	result := make([]int, len(slice))
+	for i, v := range slice {
+		result[i] = int(v)
+	}
+	return result
 }

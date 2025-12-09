@@ -12,6 +12,7 @@ import (
 	"backend/data/models"
 
 	"github.com/gorilla/websocket"
+	"github.com/lib/pq"
 )
 
 // upgrader converts an incoming HTTP request to a WebSocket connection.
@@ -394,8 +395,8 @@ func (h *ChatHub) Run() {
 				}
 
 				// Update message with validated turn data
-				inc.HostPools = gameTurn.HostPonds
-				inc.OppPools = gameTurn.OpponentPonds
+				inc.HostPools = convertInt64SliceToInt(gameTurn.HostPonds)
+				inc.OppPools = convertInt64SliceToInt(gameTurn.OpponentPonds)
 				inc.HostScore = gameTurn.HostScore
 				inc.OpponentScore = gameTurn.OpponentScore
 
@@ -632,4 +633,13 @@ func GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
+}
+
+// Helper function for converting pq.Int64Array to []int
+func convertInt64SliceToInt(slice pq.Int64Array) []int {
+	result := make([]int, len(slice))
+	for i, v := range slice {
+		result[i] = int(v)
+	}
+	return result
 }
