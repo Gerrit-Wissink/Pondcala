@@ -42,7 +42,7 @@ func TakeTurn(gameID, userID uint, selected_index int, host_ponds []int, opponen
 
 func FetchGameByID(gameID uint) (*models.Game, error) {
 	var game models.Game
-	result := DB.Preload("HostUser").Preload("OpponentUser").Where(`"id" = ?`, gameID).First(&game)
+	result := DB.Preload("Host").Preload("Opponent").Where(`"id" = ?`, gameID).First(&game)
 	if result.Error != nil {
 		return nil, fmt.Errorf("game not found: %w", result.Error)
 	}

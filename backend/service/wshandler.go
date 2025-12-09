@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"backend/business"
-	"backend/data/dbmethods"
 	"backend/data/models"
 
 	"github.com/gorilla/websocket"
@@ -264,7 +263,7 @@ func (h *ChatHub) Run() {
 				if strings.ToLower(inc.Status) == "accepted" {
 					// Create game where sender is host and recipient is opponent
 					if sender != 0 && recipient != 0 {
-						game, err := dbmethods.CreateGame(sender, recipient)
+						game, _, err := business.CreateGame(sender, recipient)
 						if err != nil {
 							log.Printf("Error creating game on invite accept: %v", err)
 						} else {
