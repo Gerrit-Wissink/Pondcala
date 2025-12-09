@@ -161,7 +161,11 @@ func FetchCurrentBoardState(gameID uint) (hostPonds []int, opponentPonds []int, 
 
 func GetAllGamesByUserID(userID uint) ([]models.Game, error) {
 	var games []models.Game
-	result := DB.Where(`"hostID" = ? OR "opponentID" = ?`, userID, userID).Find(&games)
+	// Only return games without a winner (active games)
+	result := DB.Where(`("hostID" = ? OR "opponentID" = ?) AND "winner" IS NULL`, userID, userID).
+		Preload("Host").
+		Preload("Opponent").
+		Find(&games)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch games for user: %w", result.Error)
 	}
