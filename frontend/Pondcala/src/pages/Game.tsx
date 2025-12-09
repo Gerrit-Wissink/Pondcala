@@ -722,23 +722,28 @@ export default function Game() {
         
         // Backend always adds to opponent ponds in order: 0->1->2->3->4->5
         // The display is mirrored, so backend index 0 appears at visual position 5
-        // When animating, always use actual backend index (i)
-        // The mirroring in OpponentPondRow will make it look correct visually
+        // When animating YOUR turn: highlight opponent ponds (refs are mirrored)
+        // When animating OPPONENT turn: highlight your ponds (refs are not mirrored)
         for (let i = 0; i < fishCount && i < len; i++) {
             const actualIndex = i;
             
+            // For highlighting: always use backend index (mirroring happens in JSX)
             setOpponentHighlighted(actualIndex);
 
             let sourceEl: HTMLElement | SVGElement | null = null;
+            // For refs: when animating YOUR turn into opponent ponds, refs are reversed
+            // When animating OPPONENT turn into your ponds, refs are not reversed
+            const refIndex = animateAsYourTurn ? (len - 1 - i) : i;
+            
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                // Previous pond in sequence (always i-1 since we increment)
-                const prevIndex = actualIndex - 1;
-                sourceEl = opponentPondRefs.current[prevIndex] ?? null;
+                // Previous pond in sequence
+                const prevRefIndex = animateAsYourTurn ? (refIndex + 1) : (refIndex - 1);
+                sourceEl = opponentPondRefs.current[prevRefIndex] ?? null;
             }
 
-            const toEl = opponentPondRefs.current[actualIndex];
+            const toEl = opponentPondRefs.current[refIndex];
             triggerAnimate(sourceEl ?? null, toEl ?? null, remainingFish);
 
             await new Promise(resolve => setTimeout(resolve, 850));

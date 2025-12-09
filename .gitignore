@@ -1,5 +1,6 @@
 # Backend static build files
 backend/static/
+backend/static/*
 
 # Go binaries
 backend/backend
