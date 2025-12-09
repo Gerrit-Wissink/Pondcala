@@ -9,7 +9,7 @@ import (
 
 func FetchAllLobbyMessages() ([]models.LobbyChat, error) {
 	var messages []models.LobbyChat
-	result := DB.Order("timestamp asc").Limit(250).Find(&messages)
+	result := DB.Order(`"timestamp" asc`).Limit(250).Find(&messages)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch lobby messages: %w", result.Error)
 	}
@@ -32,7 +32,7 @@ func SaveLobbyMessage(userID uint, message string) (*models.LobbyChat, error) {
 
 func FetchAllGameMessages(gameID uint) ([]models.GameChat, error) {
 	var messages []models.GameChat
-	result := DB.Where("gameID = ?", gameID).Order("timestamp asc").Find(&messages).Limit(100)
+	result := DB.Where(`"gameID" = ?`, gameID).Order(`"timestamp" asc`).Find(&messages).Limit(100)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch game messages: %w", result.Error)
 	}
