@@ -695,11 +695,10 @@ export default function Game() {
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
-        // In Mancala, stones always go into opponent ponds right-to-left (5->4->3)
-        // This is true whether YOU are making the move or you're watching THEM
+        // When YOU make a move: stones go into opponent ponds right-to-left (5->4->3)
+        // When viewing OPPONENT's move: stones go into YOUR ponds left-to-right (0->1->2)
         for (let i = 0; i < fishCount && i < len; i++) {
-            // Always go right-to-left in opponent ponds: start at index 5, go to 4, 3, etc.
-            const actualIndex = len - 1 - i;
+            const actualIndex = animateAsYourTurn ? (len - 1 - i) : i;
             
             setOpponentHighlighted(actualIndex);
 
@@ -707,8 +706,8 @@ export default function Game() {
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                // Previous pond in the right-to-left sequence: if we're at index 4, prev is 5
-                const prevIndex = actualIndex + 1;
+                // Previous pond in sequence
+                const prevIndex = animateAsYourTurn ? (actualIndex + 1) : (actualIndex - 1);
                 sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
