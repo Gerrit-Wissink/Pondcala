@@ -144,13 +144,25 @@ export default function Game() {
                 ]));
                 setWinner(gameState.Winner);
                 
-                // If game has already ended, show the modal
-                if (gameState.Winner !== null && gameState.Winner !== undefined) {
-                    setIsEndingModalOpen(true);
+                // Set scores for both players
+                if (isHostPlayer) {
+                    setYourScore(gameState.HostScore || 0);
+                    setOpponentScore(gameState.OpponentScore || 0);
+                } else {
+                    setYourScore(gameState.OpponentScore || 0);
+                    setOpponentScore(gameState.HostScore || 0);
                 }
                 
-                // Check if we need to animate the last turn
-                if (gameState.LastTwoTurns && gameState.LastTwoTurns.length > 1) {
+                // If game has already ended, show the modal
+                if (gameState.Winner !== null && gameState.Winner !== undefined) {
+                    // Set final board state for ended games
+                    setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
+                    setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
+                    setWhoseTurnID(gameState.WhoseTurn);
+                    setTurnCounter(gameState.TurnNumber);
+                    setIsEndingModalOpen(true);
+                } else if (gameState.LastTwoTurns && gameState.LastTwoTurns.length > 1) {
+                    // Check if we need to animate the last turn
                     // Set the board state to the previous turn (before the last turn)
                     const prevTurn = gameState.LastTwoTurns[0];
                     const prevHostPonds = prevTurn.host_ponds;
@@ -158,7 +170,6 @@ export default function Game() {
                     
                     setCounts(isHostPlayer ? prevHostPonds : prevOpponentPonds);
                     setOpponentCounts(isHostPlayer ? prevOpponentPonds : prevHostPonds);
-                    setYourScore(isHostPlayer ? prevTurn.host_score : prevTurn.opponent_score);
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber - 1)
 
@@ -178,7 +189,6 @@ export default function Game() {
                         // Set the final board state
                         setCounts(isHostPlayer ? lastTurn.host_ponds : lastTurn.opponent_ponds);
                         setOpponentCounts(isHostPlayer ? lastTurn.opponent_ponds : lastTurn.host_ponds);
-                        setYourScore(isHostPlayer ? lastTurn.host_score : lastTurn.opponent_score);
                         setWhoseTurnID(gameState.WhoseTurn);
                         setTurnCounter(gameState.TurnNumber);
                     }, 100);
@@ -186,7 +196,6 @@ export default function Game() {
                     // No animation needed, just set the current state
                     setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
                     setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
-                    setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber);
                 }
