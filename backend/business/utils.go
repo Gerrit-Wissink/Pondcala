@@ -169,8 +169,8 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 		expectedHostScore = 0
 		expectedOpponentScore = 0
 	} else {
-		// Get the most recent turn (lastTurns is ordered by timestamp desc)
-		lastTurn := lastTurns[0]
+		// Get the most recent turn (lastTurns is reversed: index 0 is older, last index is newest)
+		lastTurn := lastTurns[len(lastTurns)-1]
 		expectedHostPonds = convertInt64SliceToInt(lastTurn.HostPonds)
 		expectedOpponentPonds = convertInt64SliceToInt(lastTurn.OpponentPonds)
 		expectedHostScore = lastTurn.HostScore
