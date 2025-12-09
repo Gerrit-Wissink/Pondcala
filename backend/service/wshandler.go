@@ -146,8 +146,10 @@ func (h *ChatHub) Run() {
 		case client := <-h.register:
 			// The Go Mutex lock ensures that the clients map is safely modified.
 			h.mu.Lock()
-			// unknown user at registration time; set userID 0 until first inbound message
-			h.clients[client] = 0
+			// Only set userID to 0 if not already set (e.g., from ChatHandler)
+			if _, exists := h.clients[client]; !exists {
+				h.clients[client] = 0
+			}
 			// Release the Mutex lock after modification.
 			h.mu.Unlock()
 
@@ -222,7 +224,7 @@ func (h *ChatHub) Run() {
 					// Schedule timeout (e.g., 30s). If invite still pending, send a timeout update.
 					go func(s, r uint, sentAt string) {
 						// configurable timeout
-						timeout := 30 * time.Second
+						timeout := 120 * time.Second
 						time.Sleep(timeout)
 
 						// Emit a timeout update for this invitation
@@ -548,6 +550,21 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user from session token and set them online
+	session := GetSessionFromContext(r)
+	var userID uint = 0
+	if session != nil {
+		userID = session.UserID
+		// Set user online when they connect
+		if err := business.UpdateUserOnlineStatus(userID, true); err != nil {
+			log.Printf("Error setting user %d online on connect: %v", userID, err)
+		}
+		// Associate this connection with the user ID immediately
+		Hub.mu.Lock()
+		Hub.clients[conn] = userID
+		Hub.mu.Unlock()
+	}
+
 	Hub.register <- conn
 
 	// The defer keyword delays execution of the function until the surrounding
@@ -556,6 +573,12 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 	// and that resources are cleaned up.
 	defer func() {
 		Hub.unregister <- conn
+		// Set user offline when they disconnect
+		if userID != 0 {
+			if err := business.UpdateUserOnlineStatus(userID, false); err != nil {
+				log.Printf("Error setting user %d offline on disconnect: %v", userID, err)
+			}
+		}
 	}()
 
 	for {

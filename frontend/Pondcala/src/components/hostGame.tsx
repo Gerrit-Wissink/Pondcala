@@ -11,8 +11,12 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
     useEffect(() => {
         async function fetchUsers() {
             try {
+                console.log("Fetching users for invitation list...");
                 const response = await apiClient.get("/api/users/online");
-                setUsers(response.data.users || []);
+                console.log("Response", response);
+                const users = response.data.users || [];
+                const filteredUsers = users.filter((user: any) => user.id !== (localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}').id : null));
+                setUsers(filteredUsers);
             } catch (error) {
                 console.error("Error fetching users:", error);
             }
@@ -49,15 +53,18 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
             <div>
                 <h2>Invite a Player</h2>
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row'}}>
-                    <select style={{padding: '5px', borderRadius: '5px'}}>
+                    <select 
+                        style={{padding: '5px', borderRadius: '5px'}} 
+                        onChange={(e) => setSelectedOpponent(Number(e.target.value))}
+                        value={selectedOpponent || ""}
+                    >
                         <option value="" disabled selected>Select a player</option>
                         {users.map((player, index) => (
                             <option 
                                 key={index}
-                                value={player.ID}
-                                onClick={() => setSelectedOpponent(player.ID)}
+                                value={player.id}
                             >
-                                {player.Username}
+                                {player.username}
                             </option>
                         ))}
                     </select>

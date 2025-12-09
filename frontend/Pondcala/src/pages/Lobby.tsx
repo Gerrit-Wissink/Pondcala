@@ -15,7 +15,7 @@ export default function Lobby() {
     const [invitations, setInvitations] = useState<any[]>([]);
     const [inviteStatus, setInviteStatus] = useState<string>("");
 
-    const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
+    const [currentUser, setCurrentUser] = useState<any>(null);
 
     useEffect(() => {
         document.title = "Pondcala Lobby";
@@ -23,9 +23,15 @@ export default function Lobby() {
         const token = getCookie("session_token");
         if (!token || token.length < 1) {
             //Redirect to login page
-            // window.location.href = "/#/login";
+            window.location.href = "/#/login";
         }else {
             localStorage.setItem("token", token);
+        }
+
+        // Load current user from localStorage once on mount
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            setCurrentUser(JSON.parse(storedUser));
         }
     }, []);
 
@@ -61,32 +67,35 @@ export default function Lobby() {
                 console.error("Error fetching active games:", error);
             }
         }
-        getActiveGames();
-    }, []);
+        if (currentUser) {
+            getActiveGames();
+        }
+    }, [currentUser]);
 
     useEffect(() => {
         const handleInviteReceived = (event: Event) => {
             const customEvent = event as CustomEvent;
             const invite = customEvent.detail;
             
-            // If invite is from current user, update inviteStatus instead
-            if (currentUser && invite.sender === currentUser.id) {
-                setInviteStatus(invite.status || 'sent');
-                return;
-            }
-            
-            // Filter out duplicates based on sender
-            setInvitations((prevInvitations) => {
-                const isDuplicate = prevInvitations.some(
-                    (existingInvite: any) => existingInvite.sender === invite.sender
-                );
-                
-                if (isDuplicate) {
-                    return prevInvitations;
+            setTimeout(() => {// If invite is from current user, update inviteStatus instead
+                if (currentUser && invite.sender === currentUser.id) {
+                    setInviteStatus(invite.status || 'sent');
+                    return;
                 }
                 
-                return [...prevInvitations, invite];
-            });
+                // Filter out duplicates based on sender
+                setInvitations((prevInvitations) => {
+                    const isDuplicate = prevInvitations.some(
+                        (existingInvite: any) => existingInvite.sender === invite.sender
+                    );
+                    
+                    if (isDuplicate) {
+                        return prevInvitations;
+                    }
+                    
+                    return [...prevInvitations, invite];
+                });
+            }, 0);
         };
 
         window.addEventListener('invite-received', handleInviteReceived);
@@ -102,18 +111,20 @@ export default function Lobby() {
             const invite = customEvent.detail;
             const status = (invite.status || '').toLowerCase();
             
-            // If invite is from current user, update inviteStatus
-            if (currentUser && invite.sender === currentUser.id) {
-                setInviteStatus(status);
-                return;
-            }
-            
-            // If declined or timeout, remove the invitation from the array
-            if (status === 'declined' || status === 'timeout') {
-                setInvitations((prevInvitations) => 
-                    prevInvitations.filter((inv: any) => inv.sender !== invite.sender)
-                );
-            }
+            setTimeout(() => {
+                // If invite is from current user, update inviteStatus
+                if (currentUser && invite.sender === currentUser.id) {
+                    setInviteStatus(status);
+                    return;
+                }
+                
+                // If declined or timeout, remove the invitation from the array
+                if (status === 'declined' || status === 'timeout') {
+                    setInvitations((prevInvitations) => 
+                        prevInvitations.filter((inv: any) => inv.sender !== invite.sender)
+                    );
+                }
+            });
             // If accepted, do nothing (invitation already removed by acceptInvitation)
         };
 

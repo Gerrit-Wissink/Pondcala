@@ -1,8 +1,17 @@
 import { getUsername } from "../utils/UserCache";
 import { useEffect, useState } from "react";
 
+function decodeHtmlEntities(text: string): string {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+}
+
+
 export default function ChatMessage({authorID, message, timestamp}: {authorID: string, message: string, timestamp: string}) {
     const [username, setUsername] = useState<string>(`User ${authorID}`);
+
+    const decodedMessage = decodeHtmlEntities(message);
 
     useEffect(() => {
         const fetchUsername = async () => {
@@ -37,7 +46,7 @@ export default function ChatMessage({authorID, message, timestamp}: {authorID: s
 
     return (
         <div style={chatMessageStyle}>
-            <strong>{username}:</strong> <span style={messageTextStyle}>{message}</span> <em style={messageTimeStyle}>({timestamp})</em>
+            <strong>{username}:</strong> <span style={messageTextStyle}>{decodedMessage}</span> <em style={messageTimeStyle}>({timestamp})</em>
         </div>
     );
 }
