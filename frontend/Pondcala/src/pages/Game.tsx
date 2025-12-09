@@ -586,7 +586,8 @@ export default function Game() {
                     playerPondRefs,
                     setPlayerHighlighted,
                     setPlayerCounts,
-                    !animateAsYourTurn && setPlayerHighlighted === setOpHighlighted // Mirror if opponent's turn and highlighting opponent ponds
+                    !animateAsYourTurn && setPlayerHighlighted === setOpHighlighted, // Mirror highlight if opponent's turn and highlighting opponent ponds
+                    !animateAsYourTurn && playerPondRefs === opponentPondRefs // Mirror refs if opponent's turn and using opponent pond refs
                 );
                 remainingFish--;
                 lastSourceIndex = currentIndex;
@@ -698,11 +699,16 @@ export default function Game() {
         pondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
         setHighlighted: (index: number | null) => void,
         setCounts: React.Dispatch<React.SetStateAction<number[]>>,
-        shouldMirrorHighlight: boolean = false
+        shouldMirrorHighlight: boolean = false,
+        shouldMirrorRefs: boolean = false
     ): Promise<void> {
         return new Promise((resolve) => {
-            const fromEl = (prevIndex >= 0) ? pondRefs.current[prevIndex] : null;
-            const toEl = (index >= 0) ? pondRefs.current[index] : null;
+            // Convert backend index to ref index if refs are mirrored
+            const prevRefIndex = shouldMirrorRefs ? (5 - prevIndex) : prevIndex;
+            const refIndex = shouldMirrorRefs ? (5 - index) : index;
+            
+            const fromEl = (prevIndex >= 0) ? pondRefs.current[prevRefIndex] : null;
+            const toEl = (index >= 0) ? pondRefs.current[refIndex] : null;
             triggerAnimate(fromEl ?? null, toEl ?? null, currentFishRemaining);
 
             // If highlighting opponent ponds during opponent's turn, invert the index
