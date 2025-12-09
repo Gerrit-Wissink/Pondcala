@@ -147,7 +147,6 @@ export default function Game() {
                     setCounts(isHostPlayer ? prevTurn.host_ponds : prevTurn.opponent_ponds);
                     setOpponentCounts(isHostPlayer ? prevTurn.opponent_ponds : prevTurn.host_ponds);
                     setYourScore(isHostPlayer ? prevTurn.host_score : prevTurn.opponent_score);
-                    setTurnTaker(prevTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber - 1)
 
@@ -168,7 +167,6 @@ export default function Game() {
                         setCounts(isHostPlayer ? lastTurn.host_ponds : lastTurn.opponent_ponds);
                         setOpponentCounts(isHostPlayer ? lastTurn.opponent_ponds : lastTurn.host_ponds);
                         setYourScore(isHostPlayer ? lastTurn.host_score : lastTurn.opponent_score);
-                        setTurnTaker(lastTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                         setWhoseTurnID(gameState.WhoseTurn);
                         setTurnCounter(gameState.TurnNumber);
                     }, 100);
@@ -177,10 +175,6 @@ export default function Game() {
                     setCounts(isHostPlayer ? gameState.HostPonds : gameState.OpponentPonds);
                     setOpponentCounts(isHostPlayer ? gameState.OpponentPonds : gameState.HostPonds);
                     setYourScore(isHostPlayer ? gameState.HostScore : gameState.OpponentScore);
-                    const latestTurn = gameState.LastTwoTurns && gameState.LastTwoTurns.length > 0 ? gameState.LastTwoTurns[0] : null;
-                    if (latestTurn) {
-                        setTurnTaker(latestTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
-                    }
                     setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber);
                 }
@@ -255,7 +249,6 @@ export default function Game() {
             try {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;
-                setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                 setWhoseTurnID(gameState.WhoseTurn);
             } catch (error) {
                 console.error("Error fetching game state for turn:", error);
