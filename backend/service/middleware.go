@@ -53,3 +53,13 @@ func GetSessionFromContext(r *http.Request) *models.Session {
 	}
 	return nil
 }
+
+// VerifyUserID checks if the provided userID matches the session's UserID.
+// Returns true if they match, false otherwise.
+func VerifyUserID(r *http.Request, userID uint) bool {
+	session := GetSessionFromContext(r)
+	if session == nil {
+		return false
+	}
+	return session.UserID == userID
+}

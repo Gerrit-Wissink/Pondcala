@@ -597,6 +597,7 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 
 		// If the incoming message carries an author/turnTaker, associate that userID
 		// with this connection so targeted messages can be routed.
+		// Also verify that the claimed userID matches the session's userID
 		huid := uint(0)
 		if inc.Author != 0 {
 			huid = inc.Author
@@ -604,6 +605,18 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 			huid = inc.TurnTaker
 		} else if inc.Sender != 0 {
 			huid = inc.Sender
+		}
+
+		// Verify that the claimed userID matches the session's userID
+		if huid != 0 && userID != 0 && huid != userID {
+			log.Printf("UserID mismatch: session has userID %d but message claims %d", userID, huid)
+			// Send error message back to client
+			errorMsg := IncomingMessage{
+				Type:    "error",
+				Message: "Authentication error: user ID mismatch",
+			}
+			conn.WriteJSON(errorMsg)
+			continue // Skip processing this message
 		}
 
 		if huid != 0 {

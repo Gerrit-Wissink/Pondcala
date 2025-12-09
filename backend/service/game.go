@@ -42,6 +42,12 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify that the session's user_id matches the request's user_id
+	if !VerifyUserID(r, request.UserID) {
+		writeError(w, http.StatusForbidden, "Session user_id does not match request user_id")
+		return
+	}
+
 	// Call business logic
 	gameTurn, err := business.ProcessTurn(request.GameID, request.UserID, request.SelectedIndex, request.HostPonds, request.OpponentPonds, request.UserScore)
 	if err != nil {
@@ -106,6 +112,13 @@ func GetGameState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the session to verify the user is a participant in this game
+	session := GetSessionFromContext(r)
+	if session == nil {
+		writeError(w, http.StatusUnauthorized, "No valid session found")
+		return
+	}
+
 	// Call business logic to fetch game state
 	/*
 		   GameState:
@@ -125,6 +138,30 @@ func GetGameState(w http.ResponseWriter, r *http.Request) {
 	game, err := business.FetchGameStateByID(uint(gameID))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to fetch game state: "+err.Error())
+		return
+	}
+
+	// Type assert to access the struct fields
+	gameState, ok := game.(struct {
+		WhoseTurn     uint
+		Host          models.User
+		Opponent      models.User
+		HostPonds     []int
+		OpponentPonds []int
+		HostScore     int
+		OpponentScore int
+		LastTwoTurns  []models.GameTurn
+		TurnNumber    int
+		Winner        *uint
+	})
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "Invalid game state format")
+		return
+	}
+
+	// Verify that the requesting user is either the host or opponent
+	if session.UserID != gameState.Host.ID && session.UserID != gameState.Opponent.ID {
+		writeError(w, http.StatusForbidden, "You are not a participant in this game")
 		return
 	}
 
@@ -160,6 +197,12 @@ func GetAllGamesByUserID(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid user_id parameter: "+err.Error())
+		return
+	}
+
+	// Verify that the session's user_id matches the requested user_id
+	if !VerifyUserID(r, uint(userID)) {
+		writeError(w, http.StatusForbidden, "Session user_id does not match requested user_id")
 		return
 	}
 
@@ -242,6 +285,12 @@ func EndGame(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid JSON payload: "+err.Error())
+		return
+	}
+
+	// Verify that the session's user_id matches the request's user_id
+	if !VerifyUserID(r, request.UserID) {
+		writeError(w, http.StatusForbidden, "Session user_id does not match request user_id")
 		return
 	}
 
