@@ -727,7 +727,7 @@ export default function Game() {
                 <h2>{turnTaker}</h2>
             </div>
             <h1 style={whiteOnBlack}>Turn {turnCounter}</h1>
-            <button>{/* Menu Icon */}</button>
+            
         </div>
         <div style = {{display: 'grid', gap: '0vw', gridTemplateColumns: '1fr 3fr 1fr'}}>
             <LargePond ref={leftLargeRef} score={null} />
@@ -738,7 +738,7 @@ export default function Game() {
                 highlightedIndex={yourHighlighted}
                 yourPondRefs={yourPondRefs} 
                 onPondClick={handlePondClick}
-                disabled={isAnimating || winner !== null}
+                disabled={isAnimating || winner !== null || currentUser.username !== turnTaker}
             />
             </div>
             <LargePond ref={rightLargeRef} score={displayedScore} />

@@ -9,7 +9,6 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     const [messages, setMessages] = useState<any[]>([]);
     const chatContentRef = useRef<HTMLDivElement>(null);
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
-    const chatContentRef = useRef<HTMLDivElement>(null);
 
     const fetchMessages = async () => {
         // Fetch initial chat messages from server
@@ -21,13 +20,6 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
             console.error("Error fetching chat messages:", error);
         }
     };
-
-    // Auto-scroll to bottom when messages change
-    useEffect(() => {
-        if (chatContentRef.current) {
-            chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
-        }
-    }, [messages]);
 
     useEffect(() => {
         fetchMessages();
@@ -206,7 +198,6 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
                             e.currentTarget.style.outline = '';
                             e.currentTarget.style.outlineOffset = '';
                         }}
-                        onKeyDown={handleKeyDown}
                     />
                     <button 
                         id={`${idPrefix}-send-btn`} 

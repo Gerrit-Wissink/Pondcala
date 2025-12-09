@@ -66,9 +66,7 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
                             <option 
                                 key={index}
                                 value={player.id}
-                                value={player.id}
                             >
-                                {player.username}
                                 {player.username}
                             </option>
                         ))}

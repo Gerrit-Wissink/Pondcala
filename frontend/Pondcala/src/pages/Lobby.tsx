@@ -62,6 +62,7 @@ export default function Lobby() {
                 const token = localStorage.getItem("token") || getCookie("session_token");
                 if (!token || !currentUser || !currentUser.id) return;
                 const response = await apiClient.get(`/api/game/user-games?user_id=${currentUser.id}`);
+                console.log("Active games fetched:", response.data.games);
                 setActiveGames(response.data.games || []);
             } catch (error) {
                 console.error("Error fetching active games:", error);

@@ -1,20 +1,10 @@
 import { useState, useEffect } from "react";
 import { getUsername } from "../utils/UserCache";
 import { sendMessage } from "../utils/WebSockets";
-import { useState, useEffect } from "react";
+
 
 export default function GameInvitationModal({invite, setInvitations}: {invite: any, setInvitations: React.Dispatch<React.SetStateAction<any[]>>}) {
-    
-    const [senderUsername, setSenderUsername] = useState<string>("Loading...");
 
-    useEffect(() => {
-        async function fetchUsername() {
-            const senderId = typeof invite.sender === "number" ? invite.sender : parseInt(invite.sender);
-            const username = await getUsername(senderId);
-            setSenderUsername(username);
-        }
-        fetchUsername();
-    }, [invite.sender]);
 
     const [senderUsername, setSenderUsername] = useState<string>("Loading...");
 
