@@ -713,10 +713,10 @@ export default function Game() {
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
-        // In Mancala, stones ALWAYS go into opponent ponds right-to-left (5->4->3)
-        // This is true whether YOU are making the move or you're watching THEM
+        // When YOU move: stones go into opponent ponds right-to-left (5->4->3)
+        // When OPPONENT moves: stones go into YOUR ponds left-to-right (0->1->2)
         for (let i = 0; i < fishCount && i < len; i++) {
-            const actualIndex = len - 1 - i;
+            const actualIndex = animateAsYourTurn ? (len - 1 - i) : i;
             
             setOpponentHighlighted(actualIndex);
 
@@ -724,8 +724,8 @@ export default function Game() {
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                // Previous pond in the right-to-left sequence
-                const prevIndex = actualIndex + 1;
+                // Previous pond in sequence
+                const prevIndex = animateAsYourTurn ? (actualIndex + 1) : (actualIndex - 1);
                 sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
@@ -793,7 +793,7 @@ export default function Game() {
         <div style = {{display: 'grid', gap: '0vw', gridTemplateColumns: '1fr 3fr 1fr'}}>
             <LargePond ref={leftLargeRef} score={null} />
             <div style = {{display: 'flex', gap: '5vw', flexDirection: 'column', flex: '1'}}>
-            <OpponentPondRow counts={opponentCounts} highlightedIndex={opHighlighted} pondRefs={opponentPondRefs} />
+            <OpponentPondRow counts={[...opponentCounts].reverse()} highlightedIndex={opHighlighted !== null ? 5 - opHighlighted : null} pondRefs={opponentPondRefs} />
             <YourPondRow 
                 counts={counts} 
                 highlightedIndex={yourHighlighted}
