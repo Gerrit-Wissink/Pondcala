@@ -2,11 +2,12 @@ import "./lobbyChat.css"
 import ChatMessage from "./chatMessage";
 import apiClient from "../utils/apiClient";
 import { sendGameChatMessage, sendLobbyChatMessage } from "../utils/ChatHandler";
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 
 export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
     
     const [messages, setMessages] = useState<any[]>([]);
+    const chatContentRef = useRef<HTMLDivElement>(null);
     const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}') : null;
 
     const fetchMessages = async () => {
@@ -68,11 +69,26 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
         };
     }, [type, gameID])
 
+    // Auto-scroll to bottom when messages change
+    useEffect(() => {
+        if (chatContentRef.current) {
+            chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
+        }
+    }, [messages]);
+
     function handleSendButtonClick() {
         if (type === "lobby") {
             sendLobbyChatMessage(currentUser ? currentUser.id : 0);
         } else if (type === "game") {
             sendGameChatMessage(gameID ? gameID : 0, currentUser ? currentUser.id : 0, []);
+        }
+    }
+
+    function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+        // Send message on Enter (without Shift)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Prevent newline
+            handleSendButtonClick();
         }
     }
     
@@ -157,7 +173,7 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
         <>
             <aside style={chatSidebarStyle}>
                 <h2 style={chatHeaderStyle}>Lobby Chat</h2>
-                <div id={`${idPrefix}-chat-content`} style={chatContentStyle}>
+                <div id={`${idPrefix}-chat-content`} ref={chatContentRef} style={chatContentStyle}>
                     {/* <!-- Chat messages will appear here --> */}
                     {messages.map((msg: any) => (
                         <ChatMessage 
@@ -173,6 +189,7 @@ export default function Chat({type, gameID}: {type?: string, gameID?: number}) {
                         id={`${idPrefix}-chat-message`} 
                         placeholder="Type a message..."
                         style={textareaStyle}
+                        onKeyDown={handleKeyDown}
                         onFocus={(e) => {
                             e.currentTarget.style.outline = `2px solid ${primaryColor}`;
                             e.currentTarget.style.outlineOffset = '0';

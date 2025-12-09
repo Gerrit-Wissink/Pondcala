@@ -54,7 +54,7 @@ export default function SettingsMenuModal({open, setOpen, playing, handleForfeit
                 {playing && <button onClick={() => {
                     console.log("Returning to main menu...");
                     // Add return to menu logic here
-                    window.location.href = "/#/lobby";
+                    window.location.href = "/#/";
                 }}>
                     Back to Main Menu
                 </button>}

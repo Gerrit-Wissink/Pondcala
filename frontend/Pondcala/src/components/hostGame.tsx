@@ -7,12 +7,16 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
     const [selectedOpponent, setSelectedOpponent] = useState<number | null>(null);
     const [users, setUsers] = useState<any[]>([]);
     const [allowAnyone, setAllowAnyone] = useState<boolean>(false);
+    const [status, setStatus] = useState<string>("");
 
     useEffect(() => {
         async function fetchUsers() {
             try {
+                console.log("Fetching users for invitation list...");
                 const response = await apiClient.get("/api/users/online");
-                setUsers(response.data.users || []);
+                const users = response.data.users || [];
+                const filteredUsers = users.filter((user: any) => user.id !== (localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}').id : null));
+                setUsers(filteredUsers);
             } catch (error) {
                 console.error("Error fetching users:", error);
             }
@@ -40,6 +44,7 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
         };
         
         sendMessage(inviteMessage);
+        setStatus(`Invite sent to user ${opponent}`);
     }
     
     
@@ -49,15 +54,18 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
             <div>
                 <h2>Invite a Player</h2>
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row'}}>
-                    <select style={{padding: '5px', borderRadius: '5px'}}>
-                        <option value="" disabled selected>Select a player</option>
+                    <select 
+                        style={{padding: '5px', borderRadius: '5px'}}
+                        value={selectedOpponent || ""}
+                        onChange={(e) => setSelectedOpponent(Number(e.target.value))}
+                    >
+                        <option value="" disabled>Select a player</option>
                         {users.map((player, index) => (
                             <option 
                                 key={index}
-                                value={player.ID}
-                                onClick={() => setSelectedOpponent(player.ID)}
+                                value={player.id}
                             >
-                                {player.Username}
+                                {player.username}
                             </option>
                         ))}
                     </select>
@@ -73,6 +81,7 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
                         Send Invite
                     </button>
                 </div>
+                <h2>{status}</h2>
                 {/* <!-- Rounded switch --> */}
                 <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px', flexDirection: 'row'}}>
                     <strong>Allow Anyone to Join</strong>
