@@ -12,6 +12,7 @@ export default function GameInvitationModal({invite, setInvitations, isRematch =
         async function fetchUsername() {
             const senderId = typeof invite.sender === "number" ? invite.sender : parseInt(invite.sender);
             const username = await getUsername(senderId);
+            console.log("Fetched username for senderId", senderId, ":", username);
             setSenderUsername(username);
         }
         fetchUsername();

@@ -12,6 +12,7 @@ export default function ChatMessage({authorID, message, timestamp}: {authorID: s
     const [username, setUsername] = useState<string>(`User ${authorID}`);
 
     const decodedMessage = decodeHtmlEntities(message);
+    const decodedUsername = decodeHtmlEntities(username);
 
     useEffect(() => {
         const fetchUsername = async () => {
@@ -46,7 +47,7 @@ export default function ChatMessage({authorID, message, timestamp}: {authorID: s
 
     return (
         <div style={chatMessageStyle}>
-            <strong style={{color: 'black'}}>{username}:</strong> <span style={messageTextStyle}>{decodedMessage}</span> <em style={messageTimeStyle}>({timestamp})</em>
+            <strong style={{color: 'black'}}>{decodedUsername}:</strong> <span style={messageTextStyle}>{decodedMessage}</span> <em style={messageTimeStyle}>({timestamp})</em>
         </div>
     );
 }

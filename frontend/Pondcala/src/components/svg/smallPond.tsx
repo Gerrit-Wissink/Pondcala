@@ -1,6 +1,6 @@
 import { useState, forwardRef } from "react";
 
-const SmallPond = forwardRef<SVGEllipseElement, {onClick: () => void, count: number, highlighted?: boolean}>(({onClick, count, highlighted = false}, ref) => {
+const SmallPond = forwardRef<SVGEllipseElement, {onClick: () => void, count: number, highlighted?: boolean, disabled?: boolean}>(({onClick, count, highlighted = false, disabled = false}, ref) => {
     const [hovered, setHovered] = useState(false);
     
     // console.log('SmallPond rendering with count:', count);
@@ -29,9 +29,9 @@ const SmallPond = forwardRef<SVGEllipseElement, {onClick: () => void, count: num
                     ref={ref}
 
 
-                    onMouseOver={() => {setHovered(true)}}
+                    onMouseOver={() => {setHovered(disabled ? false : true)}}
                     onMouseOut={() => {setHovered(false)}}
-                    onClick={count > 0 ? onClick : () => {console.log("Pond is disabled")}}
+                    onClick={count > 0 && !disabled ? onClick : () => {console.log("Pond is disabled")}}
                 />
             </svg>
             <h1 style={{color: 'white'}}>{count}</h1>

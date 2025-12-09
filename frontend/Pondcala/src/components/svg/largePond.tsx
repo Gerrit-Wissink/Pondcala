@@ -26,7 +26,7 @@ const LargePond = forwardRef<SVGEllipseElement, LargePondProps>(({ score }, ref)
                     style={largePondStyle}
                 />
             </svg>
-            <h1 style={{color: 'white'}}>{score ?? ''}</h1>
+            <h1 style={{color: 'white'}}>{score ?? '?'}</h1>
     </div>
     );
 });
