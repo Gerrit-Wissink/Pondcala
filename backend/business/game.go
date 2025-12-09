@@ -15,7 +15,6 @@ func ProcessTurn(gameID uint, userID uint, selectedIndex int, hostPonds []int, o
 		return nil, fmt.Errorf("failed to fetch game: %w", err)
 	}
 
-	// Fetch last turns to get current board state
 	lastTurns, err := dbmethods.FetchLastTwoTurns(gameID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch last turns: %w", err)
@@ -25,6 +24,8 @@ func ProcessTurn(gameID uint, userID uint, selectedIndex int, hostPonds []int, o
 	newHostPonds, newOpponentPonds, newHostScore, newOpponentScore, err := SimulateTurn(*game, userID, selectedIndex, lastTurns)
 	if err != nil {
 		return nil, fmt.Errorf("invalid turn: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch last turns: %w", err)
 	}
 
 	// Save the turn with the server-calculated state
