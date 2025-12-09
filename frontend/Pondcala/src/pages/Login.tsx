@@ -25,8 +25,8 @@ export default function Login() {
 
             let response = await apiClient.post("/login", requestBody);
 
-            if(response.status !== 200 || response.data.Error) {
-                throw new Error(`${response.statusText}`)
+            if(response.status !== 200 || !response.data.success) {
+                throw new Error(response.data.error || response.statusText)
             }
 
             let user = response.data.User;
@@ -64,8 +64,8 @@ export default function Login() {
 
             let response = await apiClient.post("/createAccount", requestBody);
 
-            if(response.status !== 200 || response.data.Error) {
-                throw new Error(`${response.statusText}`)
+            if(response.status !== 201 || !response.data.success) {
+                throw new Error(response.data.error || response.statusText)
             }
 
             let user = response.data.User;
