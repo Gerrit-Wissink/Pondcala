@@ -33,8 +33,10 @@ export default function Game() {
         return params.get("gameID") ?? params.get("gameId") ?? params.get("id");
     });
     const [turnTaker, setTurnTaker] = useState<string | null>(null);
+    const [whoseTurnID, setWhoseTurnID] = useState<number | null>(null);
     const [isHost, setIsHost] = useState<boolean>(false);
     const [players, setPlayers] = useState<number[]>([]);
+    const [playerNames, setPlayerNames] = useState<Map<number, string>>(new Map());
     const [winner, setWinner] = useState<number | null>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -127,6 +129,10 @@ export default function Game() {
                 const isHostPlayer = currentUser.id === gameState.Host.id;
                 setIsHost(isHostPlayer);
                 setPlayers([gameState.Host.id, gameState.Opponent.id]);
+                setPlayerNames(new Map([
+                    [gameState.Host.id, gameState.Host.username],
+                    [gameState.Opponent.id, gameState.Opponent.username]
+                ]));
                 setWinner(gameState.Winner);
                 
                 // If game has already ended, show the modal
@@ -142,6 +148,7 @@ export default function Game() {
                     setOpponentCounts(isHostPlayer ? prevTurn.opponent_ponds : prevTurn.host_ponds);
                     setYourScore(isHostPlayer ? prevTurn.host_score : prevTurn.opponent_score);
                     setTurnTaker(prevTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                    setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber - 1)
 
                     // Get the last turn to animate
@@ -162,6 +169,7 @@ export default function Game() {
                         setOpponentCounts(isHostPlayer ? lastTurn.opponent_ponds : lastTurn.host_ponds);
                         setYourScore(isHostPlayer ? lastTurn.host_score : lastTurn.opponent_score);
                         setTurnTaker(lastTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                        setWhoseTurnID(gameState.WhoseTurn);
                         setTurnCounter(gameState.TurnNumber);
                     }, 100);
                 } else {
@@ -173,6 +181,7 @@ export default function Game() {
                     if (latestTurn) {
                         setTurnTaker(latestTurn.turn_taker === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
                     }
+                    setWhoseTurnID(gameState.WhoseTurn);
                     setTurnCounter(gameState.TurnNumber);
                 }
             }catch (error) {
@@ -187,6 +196,16 @@ export default function Game() {
     useEffect(() => {
         opCountsRef.current = opponentCounts;
     }, [opponentCounts]);
+
+    // Keep whoseTurnID and turnTaker in sync
+    useEffect(() => {
+        if (whoseTurnID === null || playerNames.size === 0) return;
+        
+        const turnTakerUsername = playerNames.get(whoseTurnID);
+        if (turnTakerUsername && turnTaker !== turnTakerUsername) {
+            setTurnTaker(turnTakerUsername);
+        }
+    }, [whoseTurnID, playerNames]);
 
     // Listen for game-turn WebSocket messages
     useEffect(() => {
@@ -237,6 +256,7 @@ export default function Game() {
                 const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
                 const gameState = result.data.game_state;
                 setTurnTaker(gameState.WhoseTurn === gameState.Host.id ? gameState.Host.username : gameState.Opponent.username);
+                setWhoseTurnID(gameState.WhoseTurn);
             } catch (error) {
                 console.error("Error fetching game state for turn:", error);
             }
@@ -695,10 +715,10 @@ export default function Game() {
         let remainingFish = fishCount;
         let lastPondIndex = -1;
         
-        // When YOU make a move: stones go into opponent ponds right-to-left (5->4->3)
-        // When viewing OPPONENT's move: stones go into YOUR ponds left-to-right (0->1->2)
+        // In Mancala, stones ALWAYS go into opponent ponds right-to-left (5->4->3)
+        // This is true whether YOU are making the move or you're watching THEM
         for (let i = 0; i < fishCount && i < len; i++) {
-            const actualIndex = animateAsYourTurn ? (len - 1 - i) : i;
+            const actualIndex = len - 1 - i;
             
             setOpponentHighlighted(actualIndex);
 
@@ -706,8 +726,8 @@ export default function Game() {
             if (i === 0) {
                 sourceEl = fromEl;
             } else {
-                // Previous pond in sequence
-                const prevIndex = animateAsYourTurn ? (actualIndex + 1) : (actualIndex - 1);
+                // Previous pond in the right-to-left sequence
+                const prevIndex = actualIndex + 1;
                 sourceEl = opponentPondRefs.current[prevIndex] ?? null;
             }
 
@@ -781,7 +801,7 @@ export default function Game() {
                 highlightedIndex={yourHighlighted}
                 yourPondRefs={yourPondRefs} 
                 onPondClick={handlePondClick}
-                disabled={isAnimating || winner !== null || currentUser.username !== turnTaker}
+                disabled={isAnimating || winner !== null || currentUser.id !== whoseTurnID}
             />
             </div>
             <LargePond ref={rightLargeRef} score={displayedScore} />
