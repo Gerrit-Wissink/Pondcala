@@ -6,7 +6,7 @@ import "./toggle.css";
 export default function HostGame({inviteStatus}: {inviteStatus: string}) {
     const [selectedOpponent, setSelectedOpponent] = useState<number | null>(null);
     const [users, setUsers] = useState<any[]>([]);
-    const [allowAnyone, setAllowAnyone] = useState<boolean>(false);
+    // const [allowAnyone, setAllowAnyone] = useState<boolean>(false);
     const [status, setStatus] = useState<string>("");
 
     useEffect(() => {
@@ -85,13 +85,13 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
                 </div>
                 <h2>{status}</h2>
                 {/* <!-- Rounded switch --> */}
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px', flexDirection: 'row'}}>
+                {/* <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px', flexDirection: 'row'}}>
                     <strong>Allow Anyone to Join</strong>
                     <label className="switch">
                         <input type="checkbox" checked={allowAnyone} onChange={() => setAllowAnyone(!allowAnyone)} />
                         <span className="slider round"></span>
                     </label>
-                </div>
+                </div> */}
                 <h2>{inviteStatus}</h2>
             </div>
         </div>

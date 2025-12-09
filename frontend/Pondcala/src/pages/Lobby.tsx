@@ -193,9 +193,9 @@ export default function Lobby() {
                 {showHostGame &&
                     <button onClick={() => setShowHostGame(false)}>&larr; Back to Lobby</button>
                 }
-                {showFindGame &&
+                {/* {showFindGame &&
                     <button onClick={() => setShowFindGame(false)}>&larr; Back to Lobby</button>
-                }
+                } */}
             </nav>
             <div>
                 {activeGames.length > 0 &&
