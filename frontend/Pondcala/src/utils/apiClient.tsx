@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: '/',
+  baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,6 +12,20 @@ apiClient.interceptors.request.use(config => {
   if (token) config.headers.authorization = `Bearer ${token}`;
   return config;
 });
+
+// Response interceptor to handle errors globally
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    // If the server sent an error response with a message, attach it to the error
+    if (error.response?.data?.error) {
+      error.message = error.response.data.error;
+    } else if (error.response?.data?.message) {
+      error.message = error.response.data.message;
+    }
+    return Promise.reject(error);
+  }
+);
 
 
 function getCookie(cname: string): string {
