@@ -236,8 +236,8 @@ func SimulateTurn(game models.Game, userID uint, selected_index int, lastTurns [
 
 		// If stones still remaining, distribute in opponent's ponds
 		// In Mancala, stones continue counter-clockwise into opponent's ponds
-		// From player's perspective: go into opponent ponds from right-to-left (5->4->3->2->1->0)
-		for i := 5; i >= 0 && stonesToDistribute > 0; i-- {
+		// From opponent's perspective: go left-to-right in their ponds (0->1->2->3->4->5)
+		for i := 0; i < 6 && stonesToDistribute > 0; i++ {
 			(*opponentPlayerPonds)[i]++
 			stonesToDistribute--
 			lastPondIndex = i
