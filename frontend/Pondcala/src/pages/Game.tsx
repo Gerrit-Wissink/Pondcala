@@ -606,7 +606,9 @@ export default function Game() {
                 console.log("Hit the edge - animating to large pond");
                 
                 // Animate to player's large pond
-                const fromEl = playerPondRefs.current[lastSourceIndex];
+                // Convert backend index to ref index if using opponent ponds
+                const sourceRefIndex = (!animateAsYourTurn) ? (5 - lastSourceIndex) : lastSourceIndex;
+                const fromEl = playerPondRefs.current[sourceRefIndex];
                 const toEl = playerLargePond.current;
                 triggerAnimate(fromEl ?? null, toEl ?? null, remainingFish);
                 await new Promise(resolve => setTimeout(resolve, 850));
@@ -689,8 +691,8 @@ export default function Game() {
     }
 
     async function increaseIndexAnimatedGeneric(
-        prevIndex: number,
-        index: number,
+        prevBackendIndex: number,
+        backendIndex: number,
         currentFishRemaining: number,
         pondRefs: React.MutableRefObject<(SVGEllipseElement | null)[]>,
         setHighlighted: (index: number | null) => void,
@@ -701,22 +703,22 @@ export default function Game() {
         return new Promise((resolve) => {
             // If refs are opponent ponds, they're stored in display order (reversed)
             // Backend index 5 -> ref index 0, Backend index 0 -> ref index 5
-            const prevRefIndex = refsAreOpponentPonds ? (5 - prevIndex) : prevIndex;
-            const refIndex = refsAreOpponentPonds ? (5 - index) : index;
+            const prevRefIndex = refsAreOpponentPonds ? (5 - prevBackendIndex) : prevBackendIndex;
+            const refIndex = refsAreOpponentPonds ? (5 - backendIndex) : backendIndex;
             
-            const fromEl = (prevIndex >= 0 && prevRefIndex >= 0 && prevRefIndex <= 5) ? pondRefs.current[prevRefIndex] : null;
-            const toEl = (index >= 0 && refIndex >= 0 && refIndex <= 5) ? pondRefs.current[refIndex] : null;
+            const fromEl = (prevBackendIndex >= 0 && prevRefIndex >= 0 && prevRefIndex <= 5) ? pondRefs.current[prevRefIndex] : null;
+            const toEl = (backendIndex >= 0 && refIndex >= 0 && refIndex <= 5) ? pondRefs.current[refIndex] : null;
             triggerAnimate(fromEl ?? null, toEl ?? null, currentFishRemaining);
 
-            // If highlighting opponent ponds during opponent's turn, invert the index
-            // to counteract the JSX mirroring (5 - x)
-            const highlightIndex = shouldMirrorHighlight ? (5 - index) : index;
+            // For highlighting, use the ref index (visual position) directly
+            // If highlighting opponent ponds during opponent's turn, also invert for JSX mirroring
+            const highlightIndex = shouldMirrorHighlight ? (5 - backendIndex) : refIndex;
             setHighlighted(highlightIndex);
 
             setTimeout(() => {
                 setCounts(prev => {
                     const newCounts = [...prev];
-                    newCounts[index] += 1;
+                    newCounts[backendIndex] += 1;
                     return newCounts;
                 });
 
