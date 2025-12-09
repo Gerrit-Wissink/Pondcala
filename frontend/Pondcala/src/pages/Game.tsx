@@ -113,7 +113,7 @@ export default function Game() {
             if (!gameID) {
                 console.error("No gameID found in URL");
                 alert("Invalid game ID");
-                window.location.href = "/#/lobby";
+                window.location.href = "/#/";
                 return;
             }
             
@@ -130,7 +130,7 @@ export default function Game() {
                 }
                 if (!currentUser || !currentUser.id || currentUser.id !== gameState.Host.id && currentUser.id !== gameState.Opponent.id) {
                     alert("You are not a participant in this game.");
-                    window.location.href = "/#/lobby";
+                    window.location.href = "/#/";
                     return;
                 }
                 const isHostPlayer = currentUser.id === gameState.Host.id;
@@ -314,11 +314,11 @@ export default function Game() {
         // Placeholder for rematch logic
         // Could involve sending a WebSocket message to the server to create a new game with the same players
         console.log("Rematch requested");
-        window.location.href = `/#/lobby`; // Redirect to lobby for now
+        window.location.href = `/#/`; // Redirect to lobby for now
     }
 
     function handleBackToLobby() {
-        window.location.href = `/#/lobby`;
+        window.location.href = `/#/`;
     }
 
     async function SendTurn(index: number) {
