@@ -66,9 +66,9 @@ func GetWinner(gameID uint) (*uint, error) {
 	return game.Winner, nil
 }
 
-func FetchLastTwoTurns(gameID uint) ([]models.GameTurn, error) {
+func GetLastTwoTurnsForGame(gameID uint) ([]models.GameTurn, error) {
 	var turns []models.GameTurn
-	result := DB.Where("game_id = ?", gameID).Order("timestamp desc").Limit(2).Find(&turns)
+	result := DB.Where("gameID = ?", gameID).Order("timestamp desc").Limit(2).Find(&turns)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch game turns: %w", result.Error)
 	}
@@ -77,7 +77,7 @@ func FetchLastTwoTurns(gameID uint) ([]models.GameTurn, error) {
 
 func GetCurrentScores(gameID uint) (hostScore int, opponentScore int, err error) {
 	var lastTurn models.GameTurn
-	result := DB.Where("game_id = ?", gameID).Order("timestamp desc").First(&lastTurn)
+	result := DB.Where("gameID = ?", gameID).Order("timestamp desc").First(&lastTurn)
 	if result.Error != nil {
 		return 0, 0, fmt.Errorf("failed to fetch last turn: %w", result.Error)
 	}
@@ -93,7 +93,7 @@ func checkIfPlayerGetsAnotherTurn(gameID uint, lastTurn models.GameTurn, game mo
 	// Get the turn BEFORE the last turn to find the value at the selected index
 	// (the last turn's ponds will have 0 at selectedIndex since the fish were moved)
 	var turnBeforeLast models.GameTurn
-	prevResult := DB.Where("game_id = ?", gameID).
+	prevResult := DB.Where("gameID = ?", gameID).
 		Where("timestamp < ?", lastTurn.Timestamp).
 		Order("timestamp desc").
 		First(&turnBeforeLast)
@@ -119,7 +119,7 @@ func checkIfPlayerGetsAnotherTurn(gameID uint, lastTurn models.GameTurn, game mo
 
 func FetchWhoseTurnItIs(gameID uint) (uint, error) {
 	var lastTurn models.GameTurn
-	result := DB.Where("game_id = ?", gameID).Order("timestamp desc").First(&lastTurn)
+	result := DB.Where("gameID = ?", gameID).Order("timestamp desc").First(&lastTurn)
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to fetch last turn: %w", result.Error)
 	}
@@ -151,7 +151,7 @@ func FetchWhoseTurnItIs(gameID uint) (uint, error) {
 
 func FetchCurrentBoardState(gameID uint) (hostPonds []int, opponentPonds []int, hostScore int, opponentScore int, err error) {
 	var lastTurn models.GameTurn
-	result := DB.Where("game_id = ?", gameID).Order("timestamp desc").First(&lastTurn)
+	result := DB.Where("gameID = ?", gameID).Order("timestamp desc").First(&lastTurn)
 	if result.Error != nil {
 		return nil, nil, 0, 0, fmt.Errorf("failed to fetch last turn: %w", result.Error)
 	}
@@ -161,7 +161,7 @@ func FetchCurrentBoardState(gameID uint) (hostPonds []int, opponentPonds []int, 
 
 func GetAllGamesByUserID(userID uint) ([]models.Game, error) {
 	var games []models.Game
-	result := DB.Where("host_id = ? OR opponent_id = ?", userID, userID).Find(&games)
+	result := DB.Where("hostID = ? OR opponentID = ?", userID, userID).Find(&games)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch games for user: %w", result.Error)
 	}
@@ -170,7 +170,7 @@ func GetAllGamesByUserID(userID uint) ([]models.Game, error) {
 
 func GetCurrentTurnNumber(gameID uint) (int, error) {
 	var count int64
-	result := DB.Model(&models.GameTurn{}).Where("game_id = ?", gameID).Count(&count)
+	result := DB.Model(&models.GameTurn{}).Where("gameID = ?", gameID).Count(&count)
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to count turns: %w", result.Error)
 	}

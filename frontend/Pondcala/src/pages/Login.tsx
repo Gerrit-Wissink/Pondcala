@@ -29,7 +29,7 @@ export default function Login() {
                 throw new Error(response.data.error || response.statusText)
             }
 
-            let user = response.data.User;
+            let user = response.data.user;
             console.log("User returned from login", user);
             localStorage.setItem("user", JSON.stringify(user));
 
@@ -68,7 +68,7 @@ export default function Login() {
                 throw new Error(response.data.error || response.statusText)
             }
 
-            let user = response.data.User;
+            let user = response.data.user;
             console.log("User returned from account creation", user);
             localStorage.setItem("user", JSON.stringify(user));
 
