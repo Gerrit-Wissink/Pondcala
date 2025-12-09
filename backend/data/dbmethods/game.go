@@ -66,7 +66,7 @@ func GetWinner(gameID uint) (*uint, error) {
 	return game.Winner, nil
 }
 
-func GetLastTwoTurnsForGame(gameID uint) ([]models.GameTurn, error) {
+func FetchLastTwoTurns(gameID uint) ([]models.GameTurn, error) {
 	var turns []models.GameTurn
 	result := DB.Where("gameID = ?", gameID).Order("timestamp desc").Limit(2).Find(&turns)
 	if result.Error != nil {
