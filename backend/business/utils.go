@@ -294,10 +294,21 @@ func DetermineEndOfGameScores(gameID uint) (hostScore int, opponentScore int, er
 		for _, stones := range opponentPonds {
 			opponentScore += stones
 		}
+		// Empty opponent ponds after collecting
+		opponentPonds = make([]int, len(opponentPonds))
 	} else if opponentEmpty {
 		for _, stones := range hostPonds {
 			hostScore += stones
 		}
+		// Empty host ponds after collecting
+		hostPonds = make([]int, len(hostPonds))
+	}
+
+	// Save final game state with emptied ponds and updated scores
+	// Use 0 as userID since this is a system-generated final state
+	_, err = dbmethods.TakeTurn(gameID, 0, -1, hostPonds, opponentPonds, hostScore, opponentScore)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to save final game state: %w", err)
 	}
 
 	return hostScore, opponentScore, nil

@@ -281,26 +281,50 @@ export default function Game() {
 
     // Listen for game-end WebSocket messages
     useEffect(() => {
-        const handleGameEnd = (event: CustomEvent) => {
+        const handleGameEnd = async (event: CustomEvent) => {
             const endData = event.detail;
             console.log("Received game-end message:", endData);
             
-            // Update final scores from server
-            if (isHost) {
-                setYourScore(endData.hostScore || 0);
-                setOpponentScore(endData.opponentScore || 0);
-            } else {
-                setYourScore(endData.opponentScore || 0);
-                setOpponentScore(endData.hostScore || 0);
+            // Wait a moment for the backend to save the final game state
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Fetch the final game state to get accurate scores and emptied ponds
+            try {
+                const result = await apiClient.get(`/api/game/state?gameID=${gameID}`);
+                const gameState = result.data.game_state;
+                console.log("Final game state:", gameState);
+                
+                // Update final scores from fetched game state
+                if (isHost) {
+                    setYourScore(gameState.HostScore || 0);
+                    setOpponentScore(gameState.OpponentScore || 0);
+                    setCounts(gameState.HostPonds || Array(6).fill(0));
+                    setOpponentCounts(gameState.OpponentPonds || Array(6).fill(0));
+                } else {
+                    setYourScore(gameState.OpponentScore || 0);
+                    setOpponentScore(gameState.HostScore || 0);
+                    setCounts(gameState.OpponentPonds || Array(6).fill(0));
+                    setOpponentCounts(gameState.HostPonds || Array(6).fill(0));
+                }
+                
+                // Set winner from the WebSocket message
+                setWinner(endData.winner);
+                setIsEndingModalOpen(true);
+            } catch (error) {
+                console.error("Error fetching final game state:", error);
+                // Fallback to WebSocket data if fetch fails
+                if (isHost) {
+                    setYourScore(endData.hostScore || 0);
+                    setOpponentScore(endData.opponentScore || 0);
+                } else {
+                    setYourScore(endData.opponentScore || 0);
+                    setOpponentScore(endData.hostScore || 0);
+                }
+                setCounts(Array(6).fill(0));
+                setOpponentCounts(Array(6).fill(0));
+                setWinner(endData.winner);
+                setIsEndingModalOpen(true);
             }
-            
-            // Clear all ponds
-            setCounts(Array(6).fill(0));
-            setOpponentCounts(Array(6).fill(0));
-            
-            // Set winner and show modal
-            setWinner(endData.winner);
-            setIsEndingModalOpen(true);
         };
 
         window.addEventListener('game-end', handleGameEnd as any);
@@ -308,7 +332,7 @@ export default function Game() {
         return () => {
             window.removeEventListener('game-end', handleGameEnd as any);
         };
-    }, [isHost]); //Listen for game-end WebSocket messages
+    }, [isHost, gameID]); //Listen for game-end WebSocket messages
 
     useEffect(() => {
         return () => {
