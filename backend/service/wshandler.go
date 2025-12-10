@@ -604,7 +604,13 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 		} else if inc.TurnTaker != 0 {
 			huid = inc.TurnTaker
 		} else if inc.Sender != 0 {
-			huid = inc.Sender
+			// For invite messages with status "accepted" or "declined", the Sender field
+			// refers to the original sender, not the current message sender (the recipient).
+			// Skip validation for these cases.
+			inviteStatus := strings.ToLower(inc.Status)
+			if inc.Type != "invite" || inviteStatus == "sent" {
+				huid = inc.Sender
+			}
 		}
 
 		// Verify that the claimed userID matches the session's userID
