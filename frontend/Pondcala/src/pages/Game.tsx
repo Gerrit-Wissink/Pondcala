@@ -735,42 +735,43 @@ export default function Game() {
         // Capture rule: If the last stone landed in an empty pond on the player's side
         // (value is now 1) and it's not the large pond, capture that pond and the opposite pond
         if (lastPondWasPlayerSide && lastPondIndex >= 0 && lastPondIndex < 6) {
-            setPlayerCounts((prevCounts) => {
-                const currentValue = prevCounts[lastPondIndex];
-                if (currentValue === 1) {
-                    const oppositeIndex = 5 - lastPondIndex;
+            // Check capture conditions and calculate values first
+            const currentPlayerCounts = animateAsYourTurn ? counts : opponentCounts;
+            const currentValue = currentPlayerCounts[lastPondIndex];
+            
+            if (currentValue === 1) {
+                const oppositeIndex = 5 - lastPondIndex;
+                
+                // Get the current opponent counts
+                const currentOpponentCounts = animateAsYourTurn ? opCountsRef.current : [...counts];
+                const oppositePondValue = currentOpponentCounts[oppositeIndex];
+                
+                if (oppositePondValue > 0) {
+                    const capturedStones = currentValue + oppositePondValue;
                     
-                    // Get the current opponent counts
-                    const currentOpponentCounts = animateAsYourTurn ? opCountsRef.current : [...counts];
-                    const oppositePondValue = currentOpponentCounts[oppositeIndex];
-                    
-                    if (oppositePondValue > 0) {
-                        const capturedStones = currentValue + oppositePondValue;
-                        
-                        // Update player's pond to 0
+                    // Update player's pond to 0
+                    setPlayerCounts((prevCounts) => {
                         const newPlayerCounts = [...prevCounts];
                         newPlayerCounts[lastPondIndex] = 0;
-                        
-                        // Update opponent's pond to 0
-                        setOpponentPlayerCounts((prevOpponentCounts) => {
-                            const newOpponentCounts = [...prevOpponentCounts];
-                            newOpponentCounts[oppositeIndex] = 0;
-                            return newOpponentCounts;
-                        });
-                        
-                        // Add captured stones to score (only if animating as your turn)
-                        if (animateAsYourTurn) {
-                            const newScore = yourScore + capturedStones;
-                            setYourScore(newScore);
-                            // Animate score increase for captures
-                            animateScoreIncrease(newScore);
-                        }
-                        
                         return newPlayerCounts;
+                    });
+                    
+                    // Update opponent's pond to 0
+                    setOpponentPlayerCounts((prevOpponentCounts) => {
+                        const newOpponentCounts = [...prevOpponentCounts];
+                        newOpponentCounts[oppositeIndex] = 0;
+                        return newOpponentCounts;
+                    });
+                    
+                    // Add captured stones to score and animate (only if animating as your turn)
+                    if (animateAsYourTurn) {
+                        const newScore = yourScore + capturedStones;
+                        setYourScore(newScore);
+                        // Await score animation to prevent the board from snapping to final state
+                        await animateScoreIncrease(newScore);
                     }
                 }
-                return prevCounts;
-            });
+            }
         }
     }
 
