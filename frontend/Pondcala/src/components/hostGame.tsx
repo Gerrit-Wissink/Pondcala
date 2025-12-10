@@ -46,7 +46,8 @@ export default function HostGame({inviteStatus}: {inviteStatus: string}) {
         };
         
         sendMessage(inviteMessage);
-        setStatus(`Invite sent to user ${opponent}`);
+        const opponentUsername = users.find(user => user.id === opponent)?.username || opponent;
+        setStatus(`Invite sent to user ${opponentUsername}`);
     }
     
     
