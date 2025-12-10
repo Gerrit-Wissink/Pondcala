@@ -181,7 +181,7 @@ export default function Lobby() {
             <h1>Pondcala</h1>
             <div style={{display: 'flex', flexDirection: 'row', gap: '20px'}}>
                 <button onClick={() => setShowHostGame(true)}>Host a Game</button>
-                <button onClick={() => setShowFindGame(true)}>Find a Game</button>
+                {/* <button onClick={() => setShowFindGame(true)}>Find a Game</button> */}
                 <button onClick={handleLogout} style={{backgroundColor: '#dc3545', color: 'white'}}>Logout</button>
             </div>
         </>
@@ -205,11 +205,19 @@ export default function Lobby() {
                 {showHostGame &&
                     <button onClick={() => setShowHostGame(false)}>&larr; Back to Lobby</button>
                 }
-                {/* {showFindGame &&
+                {showFindGame &&
                     <button onClick={() => setShowFindGame(false)}>&larr; Back to Lobby</button>
-                } */}
+                }
             </nav>
-            <div>
+            <div style={
+                {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '30vh',
+                    zIndex: 1000,
+                    overflow: 'hidden',
+                }
+            }>
                 {activeGames.length > 0 &&
                     <ActiveGames games={activeGames} />
                 }
