@@ -95,6 +95,12 @@ func GetCurrentScores(gameID uint) (hostScore int, opponentScore int, err error)
 // checkIfPlayerGetsAnotherTurn determines if the last move ended in the player's large pond
 // using the formula: (selectedIndex + fishCount) % 13 === 6
 func checkIfPlayerGetsAnotherTurn(gameID uint, lastTurn models.GameTurn, game models.Game) (bool, error) {
+	// If selectedIndex is -1, this is a system-generated final turn (game ended)
+	// In this case, there is no "another turn" to give
+	if lastTurn.SelectedIndex == -1 {
+		return false, nil
+	}
+
 	isHost := lastTurn.TurnTaker == game.HostID
 
 	// Get the turn BEFORE the last turn to find the value at the selected index
