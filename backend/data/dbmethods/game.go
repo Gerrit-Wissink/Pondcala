@@ -6,6 +6,7 @@ import (
 	"backend/data/models"
 
 	"github.com/lib/pq"
+	"gorm.io/gorm"
 )
 
 func CreateGame(hostID, opponentID uint) (*models.Game, error) {
@@ -189,7 +190,16 @@ func GetCurrentTurnNumber(gameID uint) (int, error) {
 
 func GetPlayers(gameID uint) (host models.User, opponent models.User, err error) {
 	var game models.Game
-	result := DB.Preload("Host").Preload("Opponent").Where(`"id" = ?`, gameID).First(&game)
+	// Only select the User fields we need to avoid loading all relationships
+	result := DB.
+		Preload("Host", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "username", "isOnline")
+		}).
+		Preload("Opponent", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "username", "isOnline")
+		}).
+		Where(`"id" = ?`, gameID).
+		First(&game)
 	if result.Error != nil {
 		return models.User{}, models.User{}, fmt.Errorf("failed to fetch game: %w", result.Error)
 	}

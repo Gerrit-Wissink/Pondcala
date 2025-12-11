@@ -305,8 +305,11 @@ export default function Game() {
                 const gameState = result.data.game_state;
                 console.log("Final game state:", gameState);
                 
+                // Determine if current user is host by checking if their ID matches the host ID
+                const currentIsHost = currentUser?.id === gameState.Host.id;
+                
                 // Update final scores from fetched game state
-                if (isHost) {
+                if (currentIsHost) {
                     setYourScore(gameState.HostScore || 0);
                     setOpponentScore(gameState.OpponentScore || 0);
                     setCounts(gameState.HostPonds || Array(6).fill(0));
@@ -324,7 +327,10 @@ export default function Game() {
             } catch (error) {
                 console.error("Error fetching final game state:", error);
                 // Fallback to WebSocket data if fetch fails
-                if (isHost) {
+                // Determine if current user is host from the players array in the message
+                const currentIsHost = endData.players && endData.players[0] === currentUser?.id;
+                
+                if (currentIsHost) {
                     setYourScore(endData.hostScore || 0);
                     setOpponentScore(endData.opponentScore || 0);
                 } else {
@@ -343,7 +349,7 @@ export default function Game() {
         return () => {
             window.removeEventListener('game-end', handleGameEnd as any);
         };
-    }, [isHost, gameID]); //Listen for game-end WebSocket messages
+    }, [gameID, currentUser]); //Listen for game-end WebSocket messages - removed isHost from dependencies
 
     // Listen for game invitations (for rematch)
     useEffect(() => {

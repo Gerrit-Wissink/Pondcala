@@ -21,6 +21,8 @@ type ErrorResponse struct {
 func TakeTurn(w http.ResponseWriter, r *http.Request) {
 	// Set response headers
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 
 	// Only allow POST method
 	if r.Method != http.MethodPost {
@@ -91,6 +93,8 @@ func TakeTurn(w http.ResponseWriter, r *http.Request) {
 func GetGameState(w http.ResponseWriter, r *http.Request) {
 	// Set response headers
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 
 	// Only allow GET method
 	if r.Method != http.MethodGet {
@@ -179,6 +183,8 @@ func GetGameState(w http.ResponseWriter, r *http.Request) {
 func GetAllGamesByUserID(w http.ResponseWriter, r *http.Request) {
 	// Set response headers
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 
 	// Only allow GET method
 	if r.Method != http.MethodGet {
@@ -269,6 +275,8 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 func EndGame(w http.ResponseWriter, r *http.Request) {
 	// Set response headers
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 
 	// Only allow POST method
 	if r.Method != http.MethodPost {
